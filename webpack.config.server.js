@@ -4,6 +4,7 @@ const CURRENT_WORKING_DIR = process.cwd()
 
 const config = {
     name: "server",
+    mode: process.env.NODE_ENV || "development",
     entry: [ path.join(CURRENT_WORKING_DIR , './server/server.js') ],
     target: "node",
     output: {
