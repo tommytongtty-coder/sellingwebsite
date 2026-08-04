@@ -3,6 +3,7 @@ import express from 'express';
 import webpack from 'webpack';
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import { StaticRouter } from 'react-router-dom';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 
@@ -37,7 +38,12 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  const markup = ReactDOMServer.renderToString(<App />);
+  const context = {};
+  const markup = ReactDOMServer.renderToString(
+    <StaticRouter location={req.url} context={context}>
+      <App />
+    </StaticRouter>
+  );
   res.status(200).send(template({ markup, css: '' }));
 });
 
