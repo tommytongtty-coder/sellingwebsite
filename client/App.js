@@ -845,7 +845,7 @@ const AdminPage = () => (
           <table style={{ borderCollapse: 'collapse', minWidth: '960px', width: '100%' }}>
             <thead>
               <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
-                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?'].map((heading) => (
+                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Reject'].map((heading) => (
                   <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
                     {heading}
                   </th>
@@ -895,6 +895,24 @@ const AdminPage = () => (
                         width: '18px',
                       }}
                     />
+                  </td>
+                  <td style={{ padding: '18px' }}>
+                    <button
+                      type="button"
+                      aria-label={`Reject ${item.title}`}
+                      style={{
+                        background: '#fee2e2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '999px',
+                        color: '#b91c1c',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        padding: '9px 14px',
+                      }}
+                    >
+                      Reject
+                    </button>
                   </td>
                 </tr>
               ))}
