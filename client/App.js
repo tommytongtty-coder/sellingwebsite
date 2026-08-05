@@ -210,7 +210,7 @@ const SiteHeader = () => (
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '999px',
           display: 'grid',
-          gridTemplateColumns: '1fr auto',
+          gridTemplateColumns: '1fr auto auto',
           overflow: 'hidden',
         }}
       >
@@ -240,6 +240,21 @@ const SiteHeader = () => (
         >
           Search
         </button>
+        <Link
+          to="/admin"
+          style={{
+            background: '#ffffff',
+            borderRadius: '999px',
+            color: '#111827',
+            fontSize: '14px',
+            fontWeight: 700,
+            margin: '6px 6px 6px 0',
+            padding: '10px 18px',
+            textDecoration: 'none',
+          }}
+        >
+          Admin Page
+        </Link>
       </div>
 
       <div
@@ -771,6 +786,122 @@ const HomePage = () => (
           </div>
         </main>
       </div>
+    </div>
+  </div>
+);
+
+// ── Admin page ────────────────────────────────────────────────────────────────
+
+const AdminPage = () => (
+  <div
+    style={{
+      background:
+        'radial-gradient(circle at top left, rgba(139, 92, 246, 0.08), transparent 28%), #f6f7fb',
+      color: '#111827',
+      fontFamily: 'Roboto, sans-serif',
+      minHeight: '100vh',
+    }}
+  >
+    <SiteHeader />
+
+    <div style={{ ...shell, paddingBottom: '60px', paddingTop: '28px' }}>
+      <div style={{ color: '#7c3aed', fontSize: '13px', fontWeight: 700, marginBottom: '18px' }}>
+        <Link to="/" style={{ color: '#7c3aed', textDecoration: 'none' }}>Listings</Link>
+        {' / '}
+        <span style={{ color: '#111827' }}>Admin Page</span>
+      </div>
+
+      <section style={{ ...card, overflow: 'hidden' }}>
+        <div
+          style={{
+            alignItems: 'center',
+            borderBottom: '1px solid #eef2f7',
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '24px 26px',
+          }}
+        >
+          <div>
+            <h1 style={{ fontSize: '30px', margin: '0 0 6px' }}>Admin Page</h1>
+            <div style={{ color: '#64748b', fontSize: '14px' }}>
+              All listed products in the marketplace.
+            </div>
+          </div>
+          <div
+            style={{
+              background: '#f5f3ff',
+              borderRadius: '999px',
+              color: '#7c3aed',
+              fontSize: '14px',
+              fontWeight: 700,
+              padding: '10px 14px',
+            }}
+          >
+            {featuredItems.length} products
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', minWidth: '960px', width: '100%' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
+                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?'].map((heading) => (
+                  <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {featuredItems.map((item) => (
+                <tr key={item.title} style={{ borderTop: '1px solid #eef2f7' }}>
+                  <td style={{ padding: '18px' }}>
+                    <div style={{ alignItems: 'center', display: 'flex', gap: '12px' }}>
+                      <div
+                        style={{
+                          background: item.accent,
+                          borderRadius: '12px',
+                          boxShadow: `0 0 0 6px ${item.accent}18`,
+                          flexShrink: 0,
+                          height: '38px',
+                          width: '38px',
+                        }}
+                      />
+                      <div>
+                        <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
+                          {item.title}
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
+                          {item.badge}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.seller}</td>
+                  <td style={{ color: '#111827', fontSize: '15px', fontWeight: 700, padding: '18px' }}>
+                    {item.price}
+                  </td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.condition}</td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.location}</td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.shipping}</td>
+                  <td style={{ padding: '18px' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Certified ${item.title}`}
+                      style={{
+                        accentColor: '#7c3aed',
+                        cursor: 'pointer',
+                        height: '18px',
+                        width: '18px',
+                      }}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </div>
 );
@@ -1310,6 +1441,7 @@ const SellPage = () => {
 const App = () => (
   <Switch>
     <Route exact path="/" component={HomePage} />
+    <Route path="/admin" component={AdminPage} />
     <Route path="/sell" component={SellPage} />
   </Switch>
 );
