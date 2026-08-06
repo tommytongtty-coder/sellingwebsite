@@ -791,16 +791,31 @@ const HomePage = () => (
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 
-const AdminPage = () => (
-  <div
-    style={{
-      background:
-        'radial-gradient(circle at top left, rgba(139, 92, 246, 0.08), transparent 28%), #f6f7fb',
-      color: '#111827',
-      fontFamily: 'Roboto, sans-serif',
-      minHeight: '100vh',
-    }}
-  >
+const AdminPage = () => {
+  const [adminItems, setAdminItems] = useState(featuredItems);
+  const [activeAdminTab, setActiveAdminTab] = useState('All Product');
+  const adminTabs = ['All Product', 'Buyer'];
+  const buyerItems = adminItems.slice(0, 4).map((item) => ({
+    ...item,
+    status: 'Active',
+  }));
+
+  const handlePriceChange = (title, nextPrice) => {
+    setAdminItems((items) =>
+      items.map((item) => (item.title === title ? { ...item, price: nextPrice } : item))
+    );
+  };
+
+  return (
+    <div
+      style={{
+        background:
+          'radial-gradient(circle at top left, rgba(139, 92, 246, 0.08), transparent 28%), #f6f7fb',
+        color: '#111827',
+        fontFamily: 'Roboto, sans-serif',
+        minHeight: '100vh',
+      }}
+    >
     <SiteHeader />
 
     <div style={{ ...shell, paddingBottom: '60px', paddingTop: '28px' }}>
@@ -836,10 +851,41 @@ const AdminPage = () => (
               padding: '10px 14px',
             }}
           >
-            {featuredItems.length} products
+            {adminItems.length} products
           </div>
         </div>
 
+        <div
+          style={{
+            borderBottom: '1px solid #eef2f7',
+            display: 'flex',
+            gap: '4px',
+            padding: '0 26px',
+          }}
+        >
+          {adminTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveAdminTab(tab)}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom: activeAdminTab === tab ? '3px solid #8b5cf6' : '3px solid transparent',
+                color: activeAdminTab === tab ? '#8b5cf6' : '#64748b',
+                cursor: 'pointer',
+                fontSize: '15px',
+                fontWeight: activeAdminTab === tab ? 700 : 500,
+                marginBottom: '-2px',
+                padding: '14px 20px',
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {activeAdminTab === 'All Product' && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', minWidth: '960px', width: '100%' }}>
             <thead>
@@ -852,7 +898,7 @@ const AdminPage = () => (
               </tr>
             </thead>
             <tbody>
-              {featuredItems.map((item) => (
+              {adminItems.map((item) => (
                 <tr key={item.title} style={{ borderTop: '1px solid #eef2f7' }}>
                   <td style={{ padding: '18px' }}>
                     <div style={{ alignItems: 'center', display: 'flex', gap: '12px' }}>
@@ -877,8 +923,24 @@ const AdminPage = () => (
                     </div>
                   </td>
                   <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.seller}</td>
-                  <td style={{ color: '#111827', fontSize: '15px', fontWeight: 700, padding: '18px' }}>
-                    {item.price}
+                  <td style={{ padding: '18px' }}>
+                    <input
+                      type="text"
+                      aria-label={`Price for ${item.title}`}
+                      value={item.price}
+                      onChange={(e) => handlePriceChange(item.title, e.target.value)}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        color: '#111827',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        outline: 'none',
+                        padding: '9px 11px',
+                        width: '110px',
+                      }}
+                    />
                   </td>
                   <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.condition}</td>
                   <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.location}</td>
@@ -918,10 +980,104 @@ const AdminPage = () => (
             </tbody>
           </table>
         </div>
+        )}
+
+        {activeAdminTab === 'Buyer' && (
+          <div style={{ display: 'grid', gap: '14px', padding: '24px 26px' }}>
+            {buyerItems.map((item) => (
+              <div
+                key={item.title}
+                style={{
+                  alignItems: 'center',
+                  background: '#ffffff',
+                  border: '1px solid #eef2f7',
+                  borderRadius: '16px',
+                  display: 'grid',
+                  gap: '18px',
+                  gridTemplateColumns: 'minmax(0, 1fr) 130px minmax(220px, 1fr) 110px 170px 140px',
+                  padding: '16px 18px',
+                }}
+              >
+                <div style={{ alignItems: 'center', display: 'flex', gap: '12px', minWidth: 0 }}>
+                  <div
+                    style={{
+                      background: item.accent,
+                      borderRadius: '12px',
+                      boxShadow: `0 0 0 6px ${item.accent}18`,
+                      flexShrink: 0,
+                      height: '38px',
+                      width: '38px',
+                    }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
+                      {item.title}
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>
+                      {item.seller}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
+                  {item.price}
+                </div>
+                <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
+                  I'm interested! I have make a appointment to the shop.
+                </div>
+                <div
+                  style={{
+                    background: '#d1fae5',
+                    borderRadius: '999px',
+                    color: '#10b981',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    padding: '8px 12px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {item.status}
+                </div>
+                <button
+                  type="button"
+                  aria-label={`View appointment for ${item.title}`}
+                  style={{
+                    background: '#ede9fe',
+                    border: '1px solid #ddd6fe',
+                    borderRadius: '999px',
+                    color: '#7c3aed',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    padding: '9px 12px',
+                  }}
+                >
+                  View the Appointment
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Replay to buyer for ${item.title}`}
+                  style={{
+                    background: '#111827',
+                    border: '1px solid #111827',
+                    borderRadius: '999px',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    padding: '9px 12px',
+                  }}
+                >
+                  Replay to buyer
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   </div>
-);
+  );
+};
 
 // ── Sell page ─────────────────────────────────────────────────────────────────
 
