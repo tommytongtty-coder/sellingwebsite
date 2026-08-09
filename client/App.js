@@ -957,9 +957,20 @@ const HomePage = () => {
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 
+const adminDetailFields = [
+  { key: 'title', label: 'Product' },
+  { key: 'seller', label: 'Seller' },
+  { key: 'price', label: 'Price' },
+  { key: 'condition', label: 'Condition' },
+  { key: 'location', label: 'Location' },
+  { key: 'shipping', label: 'Deal Type' },
+  { key: 'badge', label: 'Status' },
+];
+
 const AdminPage = () => {
   const [adminItems, setAdminItems] = useState(featuredItems);
   const [activeAdminTab, setActiveAdminTab] = useState('All Product');
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const adminTabs = ['All Product', 'Messages'];
   const buyerItems = adminItems.slice(0, 4).map((item) => ({
     ...item,
@@ -970,6 +981,34 @@ const AdminPage = () => {
     setAdminItems((items) =>
       items.map((item) => (item.title === title ? { ...item, price: nextPrice } : item))
     );
+  };
+
+  const openProductDetail = (item) => {
+    setSelectedProduct({ ...item, originalTitle: item.title });
+  };
+
+  const closeProductDetail = () => setSelectedProduct(null);
+
+  const handleProductDetailChange = (key, value) => {
+    setSelectedProduct((product) => (product ? { ...product, [key]: value } : product));
+  };
+
+  const saveProductDetail = () => {
+    if (!selectedProduct) return;
+    const { originalTitle, ...updatedProduct } = selectedProduct;
+    setAdminItems((items) =>
+      items.map((item) => (item.title === originalTitle ? updatedProduct : item))
+    );
+    setSelectedProduct(null);
+  };
+
+  const approveProductDetail = () => {
+    if (!selectedProduct) return;
+    const { originalTitle, ...updatedProduct } = { ...selectedProduct, condition: 'approved' };
+    setAdminItems((items) =>
+      items.map((item) => (item.title === originalTitle ? updatedProduct : item))
+    );
+    setSelectedProduct(null);
   };
 
   return (
@@ -1056,7 +1095,7 @@ const AdminPage = () => {
           <table style={{ borderCollapse: 'collapse', minWidth: '960px', width: '100%' }}>
             <thead>
               <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
-                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Reject'].map((heading) => (
+                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Waiting List'].map((heading) => (
                   <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
                     {heading}
                   </th>
@@ -1079,9 +1118,24 @@ const AdminPage = () => {
                         }}
                       />
                       <div>
-                        <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
+                        <button
+                          type="button"
+                          onClick={() => openProductDetail(item)}
+                          aria-label={`Open details for ${item.title}`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#111827',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            fontSize: '15px',
+                            fontWeight: 700,
+                            padding: 0,
+                            textAlign: 'left',
+                          }}
+                        >
                           {item.title}
-                        </div>
+                        </button>
                         <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
                           {item.badge}
                         </div>
@@ -1126,19 +1180,19 @@ const AdminPage = () => {
                   <td style={{ padding: '18px' }}>
                     <button
                       type="button"
-                      aria-label={`Reject ${item.title}`}
+                      aria-label={`Waiting List ${item.title}`}
                       style={{
-                        background: '#fee2e2',
+                        background: '#f4f959',
                         border: '1px solid #fecaca',
                         borderRadius: '999px',
-                        color: '#b91c1c',
+                        color: '#000000',
                         cursor: 'pointer',
                         fontSize: '13px',
                         fontWeight: 700,
                         padding: '9px 14px',
                       }}
                     >
-                      Reject
+                      Pending
                     </button>
                   </td>
                 </tr>
@@ -1241,6 +1295,178 @@ const AdminPage = () => {
         )}
       </section>
     </div>
+
+    {selectedProduct && (
+      <div
+        role="presentation"
+        onClick={closeProductDetail}
+        style={{
+          alignItems: 'center',
+          background: 'rgba(15, 23, 42, 0.55)',
+          bottom: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          left: 0,
+          padding: '20px',
+          position: 'fixed',
+          right: 0,
+          top: 0,
+          zIndex: 99,
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Product detail card"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: '#ffffff',
+            borderRadius: '22px',
+            boxShadow: '0 30px 80px rgba(15, 23, 42, 0.28)',
+            maxHeight: '88vh',
+            maxWidth: '620px',
+            overflowY: 'auto',
+            width: '100%',
+          }}
+        >
+          <div
+            style={{
+              alignItems: 'flex-start',
+              borderBottom: '1px solid #eef2f7',
+              display: 'flex',
+              gap: '16px',
+              justifyContent: 'space-between',
+              padding: '24px 26px',
+            }}
+          >
+            <div style={{ alignItems: 'center', display: 'flex', gap: '14px', minWidth: 0 }}>
+              <div
+                style={{
+                  background: selectedProduct.accent,
+                  borderRadius: '16px',
+                  boxShadow: `0 0 0 7px ${selectedProduct.accent}18`,
+                  flexShrink: 0,
+                  height: '48px',
+                  width: '48px',
+                }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{ color: '#111827', fontSize: '22px', margin: '0 0 6px' }}>
+                  Product Detail Card
+                </h2>
+                <div style={{ color: '#64748b', fontSize: '14px' }}>
+                  View and edit this product information.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closeProductDetail}
+              aria-label="Close product detail card"
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '999px',
+                color: '#475569',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontSize: '18px',
+                height: '36px',
+                lineHeight: 1,
+                width: '36px',
+              }}
+            >
+              x
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gap: '14px', padding: '24px 26px' }}>
+            {adminDetailFields.map((field) => (
+              <label key={field.key} style={{ display: 'grid', gap: '7px' }}>
+                <span style={{ color: '#475569', fontSize: '13px', fontWeight: 700 }}>
+                  {field.label}
+                </span>
+                <input
+                  type="text"
+                  value={selectedProduct[field.key] || ''}
+                  onChange={(e) => handleProductDetailChange(field.key, e.target.value)}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    color: '#111827',
+                    fontFamily: 'inherit',
+                    fontSize: '15px',
+                    outline: 'none',
+                    padding: '11px 12px',
+                    width: '100%',
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+
+          <div
+            style={{
+              borderTop: '1px solid #eef2f7',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end',
+              padding: '18px 26px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={closeProductDetail}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '999px',
+                color: '#475569',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '11px 18px',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={approveProductDetail}
+              style={{
+                background: '#10b981',
+                border: '1px solid #10b981',
+                borderRadius: '999px',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '11px 18px',
+              }}
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              onClick={saveProductDetail}
+              style={{
+                background: '#7c3aed',
+                border: '1px solid #7c3aed',
+                borderRadius: '999px',
+                color: '#ffffff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '11px 18px',
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   );
 };
