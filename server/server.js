@@ -10,11 +10,14 @@ import webpackHotMiddleware from 'webpack-hot-middleware';
 import config from '../config/config';
 import template from '../template';
 import App from '../client/App';
+import apiRoutes from './routes/index';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 const CURRENT_WORKING_DIR = process.cwd();
 const isDevelopment = config.env !== 'production';
 
+// ── Webpack dev middleware ────────────────────────────────────
 if (isDevelopment) {
   const webpackConfig = require('../webpack.config.client');
   const compiler = webpack(webpackConfig);
@@ -29,14 +32,17 @@ if (isDevelopment) {
   app.use('/dist', express.static(path.join(CURRENT_WORKING_DIR, 'dist')));
 }
 
-app.get('/api/health', (req, res) => {
-  res.json({
-    app: 'marketplace-template',
-    ok: true,
-    timestamp: new Date().toISOString(),
-  });
+app.use(express.json());
+
+// ── API routes ────────────────────────────────────────────────
+app.use('/api', apiRoutes);
+
+// ── API 404 — unknown /api/* routes return JSON, not HTML ─────
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API route not found', path: req.path });
 });
 
+// ── SSR catch-all ─────────────────────────────────────────────
 app.get('*', (req, res) => {
   const context = {};
   const markup = ReactDOMServer.renderToString(
@@ -46,6 +52,9 @@ app.get('*', (req, res) => {
   );
   res.status(200).send(template({ markup, css: '' }));
 });
+
+// ── Central error handler (must be last) ─────────────────────
+app.use(errorHandler);
 
 app.listen(config.port, (err) => {
   if (err) {
