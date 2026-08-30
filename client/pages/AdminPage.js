@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { shell, card } from '../styles/globals';
 import { useListings } from '../services/api';
 import SiteHeader from '../components/SiteHeader';
+import { useLanguage } from '../i18n';
 
 const adminDetailFields = [
   { key: 'title', label: 'Product' },
@@ -19,6 +20,7 @@ const AdminPage = () => {
   const { listings: dbListings } = useListings();
   const [adminItems, setAdminItems] = useState([]);
   const [activeAdminTab, setActiveAdminTab] = useState('All Product');
+  const { t } = useLanguage();
 
   // Sync adminItems when DB listings load
   useEffect(() => {
@@ -79,9 +81,9 @@ const AdminPage = () => {
 
     <div style={{ ...shell, paddingBottom: '60px', paddingTop: '28px' }}>
       <div style={{ color: '#7c3aed', fontSize: '13px', fontWeight: 700, marginBottom: '18px' }}>
-        <Link to="/" style={{ color: '#7c3aed', textDecoration: 'none' }}>Listings</Link>
+        <Link to="/" style={{ color: '#7c3aed', textDecoration: 'none' }}>{t('Listings')}</Link>
         {' / '}
-        <span style={{ color: '#111827' }}>Admin Page</span>
+        <span style={{ color: '#111827' }}>{t('Admin Page')}</span>
       </div>
 
       <section style={{ ...card, overflow: 'hidden' }}>
@@ -95,9 +97,9 @@ const AdminPage = () => {
           }}
         >
           <div>
-            <h1 style={{ fontSize: '30px', margin: '0 0 6px' }}>Admin Page</h1>
+            <h1 style={{ fontSize: '30px', margin: '0 0 6px' }}>{t('Admin Page')}</h1>
             <div style={{ color: '#64748b', fontSize: '14px' }}>
-              All listed products in the marketplace.
+              {t('All listed products in the marketplace.')}
             </div>
           </div>
           <div
@@ -110,7 +112,7 @@ const AdminPage = () => {
               padding: '10px 14px',
             }}
           >
-            {adminItems.length} products
+            {adminItems.length} {t('products')}
           </div>
         </div>
 
@@ -139,7 +141,7 @@ const AdminPage = () => {
                 padding: '14px 20px',
               }}
             >
-              {tab}
+              {t(tab)}
             </button>
           ))}
         </div>
@@ -151,7 +153,7 @@ const AdminPage = () => {
               <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
                 {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Waiting List'].map((heading) => (
                   <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
-                    {heading}
+                    {t(heading)}
                   </th>
                 ))}
               </tr>
@@ -296,7 +298,7 @@ const AdminPage = () => {
                   {item.price}
                 </div>
                 <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
-                  I'm interested! I have make a appointment to the shop.
+                  {t("I'm interested! I have make a appointment to the shop.")}
                 </div>
                 <div
                   style={{
@@ -309,7 +311,7 @@ const AdminPage = () => {
                     textAlign: 'center',
                   }}
                 >
-                  {item.status}
+                  {t(item.status)}
                 </div>
                 <button
                   type="button"
@@ -325,7 +327,7 @@ const AdminPage = () => {
                     padding: '9px 12px',
                   }}
                 >
-                  View the Appointment
+                  {t('View the Appointment')}
                 </button>
                 <button
                   type="button"
@@ -341,7 +343,7 @@ const AdminPage = () => {
                     padding: '9px 12px',
                   }}
                 >
-                  Reply to buyer
+                  {t('Reply to buyer')}
                 </button>
               </div>
             ))}
@@ -371,7 +373,7 @@ const AdminPage = () => {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Product detail card"
+          aria-label={t('Product detail card')}
           onClick={(e) => e.stopPropagation()}
           style={{
             background: '#ffffff',
@@ -406,17 +408,17 @@ const AdminPage = () => {
               />
               <div style={{ minWidth: 0 }}>
                 <h2 style={{ color: '#111827', fontSize: '22px', margin: '0 0 6px' }}>
-                  Product Detail Card
+                  {t('Product Detail Card')}
                 </h2>
                 <div style={{ color: '#64748b', fontSize: '14px' }}>
-                  View and edit this product information.
+                  {t('View and edit this product information.')}
                 </div>
               </div>
             </div>
             <button
               type="button"
               onClick={closeProductDetail}
-              aria-label="Close product detail card"
+              aria-label={t('Close product detail card')}
               style={{
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
@@ -438,7 +440,7 @@ const AdminPage = () => {
             {adminDetailFields.map((field) => (
               <label key={field.key} style={{ display: 'grid', gap: '7px' }}>
                 <span style={{ color: '#475569', fontSize: '13px', fontWeight: 700 }}>
-                  {field.label}
+                  {t(field.label)}
                 </span>
                 <input
                   type="text"
@@ -483,7 +485,7 @@ const AdminPage = () => {
                 padding: '11px 18px',
               }}
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
@@ -499,7 +501,7 @@ const AdminPage = () => {
                 padding: '11px 18px',
               }}
             >
-              Approve
+              {t('Approve')}
             </button>
             <button
               type="button"
@@ -515,7 +517,7 @@ const AdminPage = () => {
                 padding: '11px 18px',
               }}
             >
-              Save Changes
+              {t('Save Changes')}
             </button>
           </div>
         </div>

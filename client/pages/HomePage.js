@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { shell, card } from '../styles/globals';
 import { useCategories, useListings } from '../services/api';
 import SiteHeader from '../components/SiteHeader';
+import { useLanguage } from '../i18n';
 
 // ── Static data (not stored in DB) ───────────────────────────
 const filterGroups = [
@@ -43,6 +44,7 @@ const HomePage = () => {
   const categories = useCategories();
   const { listings: featuredItems, loading: listingsLoading } = useListings();
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const { t } = useLanguage();
 
   return (
     <div
@@ -58,7 +60,7 @@ const HomePage = () => {
 
     <div style={{ ...shell, paddingTop: '28px', paddingBottom: '34px' }}>
       <div style={{ color: '#7c3aed', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
-        Listings / PC Parts / Graphics Cards
+        {t('Listings')} / {t('PC Parts')} / {t('Graphics Cards')}
       </div>
 
       <section
@@ -81,7 +83,7 @@ const HomePage = () => {
         >
           <div>
             <h1 style={{ fontSize: '42px', lineHeight: 1.05, margin: '0 0 10px' }}>
-              Hong Kong Graphics Cards
+              {t('Hong Kong Graphics Cards')}
             </h1>
             <p
               style={{
@@ -92,8 +94,7 @@ const HomePage = () => {
                 maxWidth: '720px',
               }}
             >
-              Buy and sell second-hand graphics cards in Hong Kong. Every listing
-              includes fair market pricing so you always know the deal is worth it.
+              {t('Buy and sell second-hand graphics cards in Hong Kong. Every listing includes fair market pricing so you always know the deal is worth it.')}
             </p>
           </div>
 
@@ -107,7 +108,7 @@ const HomePage = () => {
             >
               <div style={{ fontSize: '28px', fontWeight: 700 }}>1.2k+</div>
               <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>
-                Active listings
+                {t('Active listings')}
               </div>
             </div>
             <div
@@ -119,7 +120,7 @@ const HomePage = () => {
             >
               <div style={{ fontSize: '28px', fontWeight: 700 }}>4.8★</div>
               <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>
-                Avg seller rating
+                {t('Avg seller rating')}
               </div>
             </div>
           </div>
@@ -146,7 +147,7 @@ const HomePage = () => {
                 padding: '9px 14px',
               }}
             >
-              {item}
+              {t(item)}
             </span>
           ))}
         </div>
@@ -183,10 +184,10 @@ const HomePage = () => {
                 textTransform: 'uppercase',
               }}
             >
-              {feature.title}
+              {t(feature.title)}
             </div>
             <div style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-              {feature.text}
+              {t(feature.text)}
             </div>
           </div>
         ))}
@@ -211,9 +212,9 @@ const HomePage = () => {
                 marginBottom: '18px',
               }}
             >
-              <div style={{ fontSize: '18px', fontWeight: 700 }}>Filters</div>
+              <div style={{ fontSize: '18px', fontWeight: 700 }}>{t('Filters')}</div>
               <span style={{ color: '#8b5cf6', fontSize: '13px', fontWeight: 700 }}>
-                Reset
+                {t('Reset')}
               </span>
             </div>
 
@@ -228,7 +229,7 @@ const HomePage = () => {
                     textTransform: 'uppercase',
                   }}
                 >
-                  {group.title}
+                  {t(group.title)}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                   {group.items.map((item, index) => (
@@ -246,7 +247,7 @@ const HomePage = () => {
                         padding: '9px 12px',
                       }}
                     >
-                      {item}
+                      {t(item)}
                     </span>
                   ))}
                 </div>
@@ -256,11 +257,10 @@ const HomePage = () => {
 
           <div style={{ ...card, padding: '22px' }}>
             <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '10px' }}>
-              Filter + Sort
+              {t('Filter + Sort')}
             </div>
             <div style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.7 }}>
-              Keep the listing flow local: chat first, negotiate if needed, then
-              choose meet-up or protected payment.
+              {t('Keep the listing flow local: chat first, negotiate if needed, then choose meet-up or protected payment.')}
             </div>
           </div>
         </aside>
@@ -288,7 +288,7 @@ const HomePage = () => {
                 padding: '12px 16px',
               }}
             >
-              Filter + Sort
+              {t('Filter + Sort')}
             </button>
 
             <div
@@ -301,7 +301,7 @@ const HomePage = () => {
                 padding: '12px 16px',
               }}
             >
-              Sort by <strong style={{ color: '#111827' }}>Most Recent</strong>
+              {t('Sort by')} <strong style={{ color: '#111827' }}>{t('Most Recent')}</strong>
             </div>
           </div>
 
@@ -314,7 +314,7 @@ const HomePage = () => {
             }}
           >
             {listingsLoading && (
-              <p style={{ color: '#64748b', gridColumn: '1/-1' }}>Loading listings…</p>
+              <p style={{ color: '#64748b', gridColumn: '1/-1' }}>{t('Loading listings...')}</p>
             )}
             {featuredItems.map((item) => (
               <article
@@ -356,7 +356,7 @@ const HomePage = () => {
                     {item.badge}
                   </span>
                   <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 700 }}>
-                    Save
+                    {t('Save')}
                   </span>
                 </div>
 
@@ -450,7 +450,7 @@ const HomePage = () => {
                       padding: '7px 10px',
                     }}
                   >
-                    {item.condition}
+                    {t(item.condition)}
                   </span>
                   <span
                     style={{
@@ -489,7 +489,7 @@ const HomePage = () => {
                       fontWeight: 700,
                     }}
                   >
-                    {item.shipping}
+                    {t(item.shipping)}
                   </div>
                 </div>
 
@@ -516,7 +516,7 @@ const HomePage = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    Chat
+                    {t('Chat')}
                   </a>
                   <a
                     href="/"
@@ -532,7 +532,7 @@ const HomePage = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    Make Offer
+                    {t('Make Offer')}
                   </a>
                 </div>
               </article>
@@ -593,7 +593,7 @@ const HomePage = () => {
               <button
                 type="button"
                 onClick={() => setSelectedProduct(null)}
-                aria-label="Close product details"
+                aria-label={t('Close product details')}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #e5e7eb',
@@ -672,7 +672,7 @@ const HomePage = () => {
                       paddingBottom: '12px',
                     }}
                   >
-                    <span style={{ color: '#64748b', fontSize: '14px' }}>{label}</span>
+                    <span style={{ color: '#64748b', fontSize: '14px' }}>{t(label)}</span>
                     <span
                       style={{
                         background: label === 'Status' ? '#d1fae5' : 'transparent',
@@ -683,7 +683,7 @@ const HomePage = () => {
                         padding: label === 'Status' ? '7px 12px' : 0,
                       }}
                     >
-                      {value}
+                      {t(value)}
                     </span>
                   </div>
                 ))}

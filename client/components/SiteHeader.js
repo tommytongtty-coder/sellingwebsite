@@ -1,15 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { shell } from '../styles/globals';
+import { useLanguage } from '../i18n';
 
-const SiteHeader = () => (
-  <header
-    style={{
-      background: '#0f172a',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-      color: '#fff',
-    }}
-  >
+const SiteHeader = () => {
+  const { language, setLanguage, t } = useLanguage();
+
+  return (
+    <header
+      style={{
+        background: '#0f172a',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        color: '#fff',
+      }}
+    >
     <div
       className="top-nav"
       style={{
@@ -48,10 +52,10 @@ const SiteHeader = () => (
         </div>
         <div>
           <div style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1 }}>
-            Market
+            {t('Market')}
           </div>
           <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px' }}>
-            buy. sell. upgrade.
+            {t('buy. sell. upgrade.')}
           </div>
         </div>
       </Link>
@@ -68,7 +72,7 @@ const SiteHeader = () => (
         }}
       >
         <input
-          placeholder="Search GPUs, parts, or sellers"
+          placeholder={t('Search GPUs, parts, or sellers')}
           style={{
             background: 'transparent',
             border: 0,
@@ -91,7 +95,7 @@ const SiteHeader = () => (
             padding: '10px 18px',
           }}
         >
-          Search
+          {t('Search')}
         </button>
         <Link
           to="/admin"
@@ -106,7 +110,7 @@ const SiteHeader = () => (
             textDecoration: 'none',
           }}
         >
-          Admin Page
+          {t('Admin Page')}
         </Link>
       </div>
 
@@ -130,10 +134,10 @@ const SiteHeader = () => (
             textDecoration: 'none',
           }}
         >
-          Sell
+          {t('Sell')}
         </Link>
         <a href="/" style={{ color: '#cbd5e1', fontSize: '14px', textDecoration: 'none' }}>
-          Log in
+          {t('Log in')}
         </a>
         <a
           href="/"
@@ -147,11 +151,28 @@ const SiteHeader = () => (
             textDecoration: 'none',
           }}
         >
-          Sign up
+          {t('Sign up')}
         </a>
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'zh-HK' ? 'en' : 'zh-HK')}
+          style={{
+            background: language === 'zh-HK' ? '#fef3c7' : 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            borderRadius: '999px',
+            color: language === 'zh-HK' ? '#92400e' : '#ffffff',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 700,
+            padding: '10px 14px',
+          }}
+        >
+          {language === 'zh-HK' ? t('English') : '繁體中文'}
+        </button>
       </div>
     </div>
   </header>
-);
+  );
+};
 
 export default SiteHeader;
