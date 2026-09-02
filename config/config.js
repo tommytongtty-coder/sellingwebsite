@@ -8,6 +8,7 @@ const config = {
     password: process.env.MYSQL_PASSWORD || 'root',
     database: process.env.MYSQL_DATABASE || 'marketplace',
   },
+  jwtSecret: process.env.JWT_SECRET || 'marketplace-dev-secret-key-change-in-production',
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder',
     clientId: process.env.STRIPE_CLIENT_ID || 'ca_placeholder',

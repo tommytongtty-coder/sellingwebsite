@@ -40,6 +40,33 @@ const trustFeatures = [
   },
 ];
 
+// Helper: derive a UI accent color from listing id
+const accentColors = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#ef4444'];
+function getAccent(item) {
+  return accentColors[(item.id || 0) % accentColors.length];
+}
+
+// Helper: format price number as "HK$X,XXX"
+function formatPrice(price) {
+  const n = Number(price);
+  if (isNaN(n)) return price;
+  return 'HK$' + n.toLocaleString('en-HK', { maximumFractionDigits: 0 });
+}
+
+// Helper: derive deal type label from booleans
+function getDealType(item) {
+  if (item.allow_meetup && item.allow_delivery) return 'Meet-up / Delivery';
+  if (item.allow_meetup) return 'Meet-up';
+  if (item.allow_delivery) return 'Delivery';
+  return 'Meet-up';
+}
+
+// Helper: map condition enum to display label
+function formatCondition(c) {
+  const map = { new: 'New', like_new: 'Like New', used: 'Used', open_box: 'Open Box' };
+  return map[c] || c;
+}
+
 const HomePage = () => {
   const categories = useCategories();
   const { listings: featuredItems, loading: listingsLoading } = useListings();
@@ -344,16 +371,16 @@ const HomePage = () => {
                 >
                   <span
                     style={{
-                      background: `${item.accent}14`,
+                      background: `${getAccent(item)}14`,
                       borderRadius: '999px',
-                      color: item.accent,
+                      color: getAccent(item),
                       fontSize: '11px',
                       fontWeight: 700,
                       padding: '7px 10px',
                       textTransform: 'uppercase',
                     }}
                   >
-                    {item.badge}
+                    {t(formatCondition(item.condition))}
                   </span>
                   <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 700 }}>
                     {t('Save')}
@@ -384,42 +411,21 @@ const HomePage = () => {
                       width: '168px',
                     }}
                   >
-                    <div
-                      style={{
-                        background: item.accent,
-                        borderRadius: '50%',
-                        boxShadow: `0 0 0 6px ${item.accent}22`,
-                        height: '42px',
-                        left: '18px',
-                        position: 'absolute',
-                        top: '35px',
-                        width: '42px',
-                      }}
-                    />
-                    <div
-                      style={{
-                        background: item.accent,
-                        borderRadius: '50%',
-                        boxShadow: `0 0 0 6px ${item.accent}22`,
-                        height: '42px',
-                        left: '64px',
-                        position: 'absolute',
-                        top: '35px',
-                        width: '42px',
-                      }}
-                    />
-                    <div
-                      style={{
-                        background: item.accent,
-                        borderRadius: '50%',
-                        boxShadow: `0 0 0 6px ${item.accent}22`,
-                        height: '42px',
-                        left: '110px',
-                        position: 'absolute',
-                        top: '35px',
-                        width: '42px',
-                      }}
-                    />
+                    {[18, 64, 110].map((left) => (
+                      <div
+                        key={left}
+                        style={{
+                          background: getAccent(item),
+                          borderRadius: '50%',
+                          boxShadow: `0 0 0 6px ${getAccent(item)}22`,
+                          height: '42px',
+                          left,
+                          position: 'absolute',
+                          top: '35px',
+                          width: '42px',
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -428,7 +434,7 @@ const HomePage = () => {
                 </div>
 
                 <div style={{ color: '#64748b', fontSize: '13px', marginTop: '8px' }}>
-                  {item.seller}
+                  {item.seller_name}
                 </div>
 
                 <div
@@ -450,7 +456,7 @@ const HomePage = () => {
                       padding: '7px 10px',
                     }}
                   >
-                    {t(item.condition)}
+                    {t(formatCondition(item.condition))}
                   </span>
                   <span
                     style={{
@@ -476,20 +482,16 @@ const HomePage = () => {
                   }}
                 >
                   <div style={{ color: '#111827', fontSize: '28px', fontWeight: 700 }}>
-                    {item.price}
+                    {formatPrice(item.price)}
                   </div>
                   <div
                     style={{
-                      color: item.shipping.includes('Protection')
-                        ? '#7c3aed'
-                        : item.shipping.includes('Offer')
-                        ? '#ea580c'
-                        : '#0f766e',
+                      color: item.allow_delivery ? '#7c3aed' : '#0f766e',
                       fontSize: '12px',
                       fontWeight: 700,
                     }}
                   >
-                    {t(item.shipping)}
+                    {t(getDealType(item))}
                   </div>
                 </div>
 
@@ -577,14 +579,14 @@ const HomePage = () => {
               <div>
                 <div
                   style={{
-                    color: selectedProduct.accent,
+                    color: getAccent(selectedProduct),
                     fontSize: '12px',
                     fontWeight: 800,
                     marginBottom: '8px',
                     textTransform: 'uppercase',
                   }}
                 >
-                  {selectedProduct.badge}
+                  {t(formatCondition(selectedProduct.condition))}
                 </div>
                 <h2 style={{ fontSize: '24px', lineHeight: 1.25, margin: 0 }}>
                   {selectedProduct.title}
@@ -639,9 +641,9 @@ const HomePage = () => {
                     <div
                       key={left}
                       style={{
-                        background: selectedProduct.accent,
+                        background: getAccent(selectedProduct),
                         borderRadius: '50%',
-                        boxShadow: `0 0 0 6px ${selectedProduct.accent}22`,
+                        boxShadow: `0 0 0 6px ${getAccent(selectedProduct)}22`,
                         height: '42px',
                         left,
                         position: 'absolute',
@@ -655,12 +657,12 @@ const HomePage = () => {
 
               <div style={{ display: 'grid', gap: '14px' }}>
                 {[
-                  ['Price', selectedProduct.price],
-                  ['Seller', selectedProduct.seller],
-                  ['Condition', selectedProduct.condition],
+                  ['Price', formatPrice(selectedProduct.price)],
+                  ['Seller', selectedProduct.seller_name],
+                  ['Condition', formatCondition(selectedProduct.condition)],
                   ['Location', selectedProduct.location],
-                  ['Deal Type', selectedProduct.shipping],
-                  ['Status', 'Active'],
+                  ['Deal Type', getDealType(selectedProduct)],
+                  ['Status', selectedProduct.status || 'Active'],
                 ].map(([label, value]) => (
                   <div
                     key={label}

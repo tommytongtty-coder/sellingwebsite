@@ -34,6 +34,9 @@ if (isDevelopment) {
 
 app.use(express.json());
 
+// ── Serve uploaded images ────────────────────────────────────
+app.use('/uploads', express.static(path.join(CURRENT_WORKING_DIR, 'uploads')));
+
 // ── API routes ────────────────────────────────────────────────
 app.use('/api', apiRoutes);
 

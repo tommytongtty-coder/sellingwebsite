@@ -8,13 +8,40 @@ import { useLanguage } from '../i18n';
 
 const adminDetailFields = [
   { key: 'title', label: 'Product' },
-  { key: 'seller', label: 'Seller' },
+  { key: 'seller_name', label: 'Seller' },
   { key: 'price', label: 'Price' },
   { key: 'condition', label: 'Condition' },
   { key: 'location', label: 'Location' },
-  { key: 'shipping', label: 'Deal Type' },
-  { key: 'badge', label: 'Status' },
+  { key: 'gpu_model', label: 'GPU Model' },
+  { key: 'status', label: 'Status' },
 ];
+
+// Helper: derive a UI accent color from listing id
+const accentColors = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#ef4444'];
+function getAccent(item) {
+  return accentColors[(item.id || 0) % accentColors.length];
+}
+
+// Helper: format price number as "HK$X,XXX"
+function formatPrice(price) {
+  const n = Number(price);
+  if (isNaN(n)) return price;
+  return 'HK$' + n.toLocaleString('en-HK', { maximumFractionDigits: 0 });
+}
+
+// Helper: derive deal type label from booleans
+function getDealType(item) {
+  if (item.allow_meetup && item.allow_delivery) return 'Meet-up / Delivery';
+  if (item.allow_meetup) return 'Meet-up';
+  if (item.allow_delivery) return 'Delivery';
+  return 'Meet-up';
+}
+
+// Helper: map condition enum to display label
+function formatCondition(c) {
+  const map = { new: 'New', like_new: 'Like New', used: 'Used', open_box: 'Open Box' };
+  return map[c] || c;
+}
 
 const AdminPage = () => {
   const { listings: dbListings } = useListings();
@@ -165,9 +192,9 @@ const AdminPage = () => {
                     <div style={{ alignItems: 'center', display: 'flex', gap: '12px' }}>
                       <div
                         style={{
-                          background: item.accent,
+                          background: getAccent(item),
                           borderRadius: '12px',
-                          boxShadow: `0 0 0 6px ${item.accent}18`,
+                          boxShadow: `0 0 0 6px ${getAccent(item)}18`,
                           flexShrink: 0,
                           height: '38px',
                           width: '38px',
@@ -193,12 +220,12 @@ const AdminPage = () => {
                           {item.title}
                         </button>
                         <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
-                          {item.badge}
+                          {item.status}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.seller}</td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.seller_name}</td>
                   <td style={{ padding: '18px' }}>
                     <input
                       type="text"
@@ -218,9 +245,9 @@ const AdminPage = () => {
                       }}
                     />
                   </td>
-                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.condition}</td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{formatCondition(item.condition)}</td>
                   <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.location}</td>
-                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{item.shipping}</td>
+                  <td style={{ color: '#475569', fontSize: '14px', padding: '18px' }}>{getDealType(item)}</td>
                   <td style={{ padding: '18px' }}>
                     <input
                       type="checkbox"
@@ -277,9 +304,9 @@ const AdminPage = () => {
                 <div style={{ alignItems: 'center', display: 'flex', gap: '12px', minWidth: 0 }}>
                   <div
                     style={{
-                      background: item.accent,
+                      background: getAccent(item),
                       borderRadius: '12px',
-                      boxShadow: `0 0 0 6px ${item.accent}18`,
+                      boxShadow: `0 0 0 6px ${getAccent(item)}18`,
                       flexShrink: 0,
                       height: '38px',
                       width: '38px',
@@ -290,12 +317,12 @@ const AdminPage = () => {
                       {item.title}
                     </div>
                     <div style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>
-                      {item.seller}
+                      {item.seller_name}
                     </div>
                   </div>
                 </div>
                 <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
-                  {item.price}
+                  {formatPrice(item.price)}
                 </div>
                 <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
                   {t("I'm interested! I have make a appointment to the shop.")}
@@ -398,9 +425,9 @@ const AdminPage = () => {
             <div style={{ alignItems: 'center', display: 'flex', gap: '14px', minWidth: 0 }}>
               <div
                 style={{
-                  background: selectedProduct.accent,
+                  background: getAccent(selectedProduct),
                   borderRadius: '16px',
-                  boxShadow: `0 0 0 7px ${selectedProduct.accent}18`,
+                  boxShadow: `0 0 0 7px ${getAccent(selectedProduct)}18`,
                   flexShrink: 0,
                   height: '48px',
                   width: '48px',
