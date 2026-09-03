@@ -163,7 +163,7 @@ const HomePage = () => {
         >
           {categories.map((item, index) => (
             <span
-              key={item}
+              key={item.id}
               style={{
                 background: index === 0 ? '#111827' : '#fff',
                 border: `1px solid ${index === 0 ? '#111827' : '#e5e7eb'}`,
@@ -174,7 +174,7 @@ const HomePage = () => {
                 padding: '9px 14px',
               }}
             >
-              {t(item)}
+              {t(item.name)}
             </span>
           ))}
         </div>

@@ -1,112 +1,72 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, Redirect } from 'react-router-dom';
 
 import { shell, card } from '../styles/globals';
 import SiteHeader from '../components/SiteHeader';
+import { useAuth } from '../auth';
+import { getMyListings, getMyFavorites, getMyOffers } from '../services/api';
 
-const sellingItems = [
-  {
-    id: 1,
-    title: 'ASUS Dual GeForce RTX 4070 Super 12GB',
-    price: 'HK$4,200',
-    status: 'Active',
-    statusColor: '#10b981',
-    statusBg: '#d1fae5',
-    date: 'Listed today',
-    views: 24,
-    offers: 2,
-    accent: '#8b5cf6',
-    condition: 'Used',
-  },
-  {
-    id: 2,
-    title: 'MSI GeForce RTX 3060 Ti Gaming X Trio',
-    price: 'HK$1,850',
-    status: 'Pending',
-    statusColor: '#d97706',
-    statusBg: '#fef3c7',
-    date: 'Listed 3 days ago',
-    views: 87,
-    offers: 5,
-    accent: '#ec4899',
-    condition: 'Used',
-  },
-  {
-    id: 3,
-    title: 'Gigabyte GTX 1660 Super OC 6GB',
-    price: 'HK$680',
-    status: 'Sold',
-    statusColor: '#6b7280',
-    statusBg: '#f3f4f6',
-    date: 'Sold 1 week ago',
-    views: 143,
-    offers: 9,
-    accent: '#64748b',
-    condition: 'Used',
-  },
-];
+const STATUS_STYLE = {
+  active:   { color: '#10b981', bg: '#d1fae5', label: 'Active' },
+  pending:  { color: '#d97706', bg: '#fef3c7', label: 'Pending' },
+  draft:    { color: '#6b7280', bg: '#f3f4f6', label: 'Draft' },
+  sold:     { color: '#6b7280', bg: '#f3f4f6', label: 'Sold' },
+  rejected: { color: '#dc2626', bg: '#fef2f2', label: 'Rejected' },
+};
 
-const buyingItems = [
-  {
-    id: 1,
-    title: 'PNY RTX 5060 Ti RGB OC 8GB',
-    price: 'HK$3,280',
-    seller: 'Echo Ops Gaming',
-    status: 'Offer Sent',
-    statusColor: '#8b5cf6',
-    statusBg: '#ede9fe',
-    date: 'Offer sent today',
-    accent: '#10b981',
-  },
-  {
-    id: 2,
-    title: 'SAPPHIRE NITRO+ Radeon RX 7900 XT',
-    price: 'HK$4,888',
-    seller: 'FrameCraft PCs',
-    status: 'Watching',
-    statusColor: '#0284c7',
-    statusBg: '#e0f2fe',
-    date: 'Added 2 days ago',
-    accent: '#06b6d4',
-  },
-];
+function formatPrice(price) {
+  const n = Number(price);
+  if (isNaN(n) || n === 0) return 'Free';
+  return `HK$${n.toLocaleString()}`;
+}
 
-const messageList = [
-  {
-    id: 1,
-    name: 'Echo Ops Gaming',
-    avatar: 'E',
-    avatarColor: '#10b981',
-    lastMessage: 'Sure, I can do HK$3,100. Meet at Mong Kok MTR?',
-    time: '2m ago',
-    unread: 2,
-    item: 'PNY RTX 5060 Ti RGB OC 8GB',
-  },
-  {
-    id: 2,
-    name: 'Alex Chan',
-    avatar: 'A',
-    avatarColor: '#8b5cf6',
-    lastMessage: 'Is the RTX 4070 Super still available?',
-    time: '1h ago',
-    unread: 1,
-    item: 'ASUS RTX 4070 Super 12GB',
-  },
-  {
-    id: 3,
-    name: 'TechParts HK',
-    avatar: 'T',
-    avatarColor: '#ec4899',
-    lastMessage: 'Thanks for the purchase! Let me know when...',
-    time: 'Yesterday',
-    unread: 0,
-    item: 'Gigabyte GTX 1660 Super OC',
-  },
-];
+function formatCondition(c) {
+  if (!c) return '';
+  return c.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  return `${days}d ago`;
+}
 
 const UserPage = () => {
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('Selling');
   const tabs = ['Selling', 'Buying', 'Messages'];
+
+  const [sellingItems, setSellingItems] = useState([]);
+  const [buyingItems, setBuyingItems] = useState([]);
+  const [loadingSelling, setLoadingSelling] = useState(true);
+  const [loadingBuying, setLoadingBuying] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    getMyListings()
+      .then((rows) => setSellingItems(rows))
+      .catch((err) => console.error('Failed to load listings:', err))
+      .finally(() => setLoadingSelling(false));
+
+    getMyOffers()
+      .then((rows) => setBuyingItems(rows))
+      .catch((err) => console.error('Failed to load offers:', err))
+      .finally(() => setLoadingBuying(false));
+  }, [user]);
+
+  if (!authLoading && !user) {
+    return <Redirect to="/login" />;
+  }
+
+  const soldCount = sellingItems.filter((i) => i.status === 'sold').length;
+  const userRating = user && user.rating ? Number(user.rating).toFixed(1) : '0.0';
 
   return (
     <div
@@ -160,19 +120,21 @@ const UserPage = () => {
                 width: '72px',
               }}
             >
-              U
+              {user ? (user.display_name || user.username || '?')[0].toUpperCase() : '?'}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ color: '#fff', fontSize: '22px', fontWeight: 700 }}>My Account</div>
+              <div style={{ color: '#fff', fontSize: '22px', fontWeight: 700 }}>
+                {user ? (user.display_name || user.username) : 'My Account'}
+              </div>
               <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>
-                @username · Member since 2024
+                @{user ? user.username : '...'} · Member since {user && user.created_at ? new Date(user.created_at).getFullYear() : '...'}
               </div>
             </div>
             <div style={{ display: 'flex', gap: '32px' }}>
               {[
-                { label: 'Listings', value: '3' },
-                { label: 'Sold', value: '1' },
-                { label: 'Rating', value: '★ 5.0' },
+                { label: 'Listings', value: String(sellingItems.length) },
+                { label: 'Sold', value: String(soldCount) },
+                { label: 'Rating', value: `\u2605 ${userRating}` },
               ].map((s) => (
                 <div key={s.label} style={{ textAlign: 'center' }}>
                   <div style={{ color: '#fff', fontSize: '22px', fontWeight: 700 }}>{s.value}</div>
@@ -243,80 +205,120 @@ const UserPage = () => {
                 + New Listing
               </Link>
             </div>
-            {sellingItems.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  ...card,
-                  alignItems: 'center',
-                  display: 'flex',
-                  gap: '18px',
-                  padding: '20px 24px',
-                }}
-              >
-                <div
-                  style={{
-                    background: `linear-gradient(135deg, ${item.accent}33, ${item.accent}11)`,
-                    border: `1.5px solid ${item.accent}44`,
-                    borderRadius: '14px',
-                    flexShrink: 0,
-                    height: '60px',
-                    width: '60px',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>
-                    {item.title}
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '13px' }}>
-                    {item.condition} · {item.date}
-                  </div>
+
+            {loadingSelling && (
+              <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
+                Loading listings...
+              </div>
+            )}
+
+            {!loadingSelling && sellingItems.length === 0 && (
+              <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
+                <div style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '14px' }}>
+                  You don&apos;t have any listings yet
                 </div>
-                <div
+                <Link
+                  to="/sell"
                   style={{
-                    alignItems: 'flex-end',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
+                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    padding: '12px 24px',
+                    textDecoration: 'none',
                   }}
                 >
-                  <div style={{ color: '#111827', fontSize: '18px', fontWeight: 700 }}>
-                    {item.price}
+                  Create your first listing
+                </Link>
+              </div>
+            )}
+
+            {sellingItems.map((item) => {
+              const st = STATUS_STYLE[item.status] || STATUS_STYLE.draft;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    ...card,
+                    alignItems: 'center',
+                    display: 'flex',
+                    gap: '18px',
+                    padding: '20px 24px',
+                  }}
+                >
+                  {item.cover_image ? (
+                    <img
+                      src={item.cover_image}
+                      alt=""
+                      style={{
+                        borderRadius: '14px',
+                        flexShrink: 0,
+                        height: '60px',
+                        objectFit: 'cover',
+                        width: '60px',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        background: 'linear-gradient(135deg, #8b5cf633, #8b5cf611)',
+                        border: '1.5px solid #8b5cf644',
+                        borderRadius: '14px',
+                        flexShrink: 0,
+                        height: '60px',
+                        width: '60px',
+                      }}
+                    />
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '13px' }}>
+                      {formatCondition(item.condition)} · {timeAgo(item.created_at)}
+                    </div>
                   </div>
-                  <div
+                  <div style={{ color: '#111827', fontSize: '16px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
+                    {formatPrice(item.price)}
+                  </div>
+                  <span
                     style={{
-                      background: item.statusBg,
+                      background: st.bg,
                       borderRadius: '999px',
-                      color: item.statusColor,
+                      color: st.color,
                       fontSize: '12px',
                       fontWeight: 700,
-                      padding: '3px 10px',
+                      minWidth: '64px',
+                      padding: '6px 14px',
+                      textAlign: 'center',
                     }}
                   >
-                    {item.status}
-                  </div>
+                    {st.label}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', gap: '24px', marginLeft: '12px', textAlign: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '17px', fontWeight: 700 }}>{item.views}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '11px' }}>Views</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '17px', fontWeight: 700 }}>{item.offers}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '11px' }}>Offers</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Buying tab */}
         {activeTab === 'Buying' && (
           <div style={{ display: 'grid', gap: '14px' }}>
-            <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>
-              Watching & Offers ({buyingItems.length})
-            </div>
+            {loadingBuying && (
+              <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
+                Loading offers...
+              </div>
+            )}
+
+            {!loadingBuying && buyingItems.length === 0 && (
+              <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
+                <div style={{ color: '#94a3b8', fontSize: '15px' }}>
+                  You haven&apos;t made any offers yet
+                </div>
+              </div>
+            )}
+
             {buyingItems.map((item) => (
               <div
                 key={item.id}
@@ -328,135 +330,67 @@ const UserPage = () => {
                   padding: '20px 24px',
                 }}
               >
-                <div
-                  style={{
-                    background: `linear-gradient(135deg, ${item.accent}33, ${item.accent}11)`,
-                    border: `1.5px solid ${item.accent}44`,
-                    borderRadius: '14px',
-                    flexShrink: 0,
-                    height: '60px',
-                    width: '60px',
-                  }}
-                />
+                {item.cover_image ? (
+                  <img
+                    src={item.cover_image}
+                    alt=""
+                    style={{
+                      borderRadius: '14px',
+                      flexShrink: 0,
+                      height: '60px',
+                      objectFit: 'cover',
+                      width: '60px',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, #10b98133, #10b98111)',
+                      border: '1.5px solid #10b98144',
+                      borderRadius: '14px',
+                      flexShrink: 0,
+                      height: '60px',
+                      width: '60px',
+                    }}
+                  />
+                )}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>
                     {item.title}
                   </div>
                   <div style={{ color: '#64748b', fontSize: '13px' }}>
-                    Seller: {item.seller} · {item.date}
+                    Your offer: HK${Number(item.amount).toLocaleString()} · {timeAgo(item.created_at)}
                   </div>
                 </div>
-                <div
+                <div style={{ color: '#111827', fontSize: '16px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
+                  HK${Number(item.price).toLocaleString()}
+                </div>
+                <span
                   style={{
-                    alignItems: 'flex-end',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
+                    background: item.offer_status === 'accepted' ? '#d1fae5' : item.offer_status === 'rejected' ? '#fef2f2' : '#ede9fe',
+                    borderRadius: '999px',
+                    color: item.offer_status === 'accepted' ? '#10b981' : item.offer_status === 'rejected' ? '#dc2626' : '#8b5cf6',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    minWidth: '64px',
+                    padding: '6px 14px',
+                    textAlign: 'center',
+                    textTransform: 'capitalize',
                   }}
                 >
-                  <div style={{ fontSize: '18px', fontWeight: 700 }}>{item.price}</div>
-                  <div
-                    style={{
-                      background: item.statusBg,
-                      borderRadius: '999px',
-                      color: item.statusColor,
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      padding: '3px 10px',
-                    }}
-                  >
-                    {item.status}
-                  </div>
-                </div>
+                  {item.offer_status}
+                </span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Messages tab */}
+        {/* Messages tab — placeholder until conversations feature is wired */}
         {activeTab === 'Messages' && (
-          <div style={{ ...card, overflow: 'hidden' }}>
-            {messageList.map((msg, i) => (
-              <div
-                key={msg.id}
-                style={{
-                  alignItems: 'center',
-                  borderBottom: i < messageList.length - 1 ? '1px solid #f1f5f9' : 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  gap: '14px',
-                  padding: '18px 24px',
-                  transition: 'background 0.1s',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <div
-                  style={{
-                    alignItems: 'center',
-                    background: msg.avatarColor,
-                    borderRadius: '50%',
-                    color: '#fff',
-                    display: 'flex',
-                    flexShrink: 0,
-                    fontSize: '16px',
-                    fontWeight: 700,
-                    height: '46px',
-                    justifyContent: 'center',
-                    width: '46px',
-                  }}
-                >
-                  {msg.avatar}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      alignItems: 'center',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginBottom: '2px',
-                    }}
-                  >
-                    <div style={{ fontSize: '15px', fontWeight: 700 }}>{msg.name}</div>
-                    <div style={{ color: '#94a3b8', flexShrink: 0, fontSize: '12px' }}>{msg.time}</div>
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '2px' }}>
-                    re: {msg.item}
-                  </div>
-                  <div
-                    style={{
-                      color: msg.unread > 0 ? '#111827' : '#94a3b8',
-                      fontSize: '13px',
-                      fontWeight: msg.unread > 0 ? 600 : 400,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {msg.lastMessage}
-                  </div>
-                </div>
-                {msg.unread > 0 && (
-                  <div
-                    style={{
-                      alignItems: 'center',
-                      background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                      borderRadius: '50%',
-                      color: '#fff',
-                      display: 'flex',
-                      flexShrink: 0,
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      height: '20px',
-                      justifyContent: 'center',
-                      width: '20px',
-                    }}
-                  >
-                    {msg.unread}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
+            <div style={{ color: '#94a3b8', fontSize: '15px' }}>
+              Messages will be available soon
+            </div>
           </div>
         )}
       </div>

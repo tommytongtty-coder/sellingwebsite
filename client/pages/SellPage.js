@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Link, useHistory } from 'react-router-dom';
+import { Link, useHistory, Redirect } from 'react-router-dom';
 
 import { shell, card } from '../styles/globals';
 import Toggle from '../components/Toggle';
 import SiteHeader from '../components/SiteHeader';
+import { useAuth } from '../auth';
+import { useCategories, createListing, uploadListingImages, publishListing } from '../services/api';
 
 const gpuModels = [
   'RTX 5090', 'RTX 5080', 'RTX 5070 Ti', 'RTX 5070', 'RTX 5060 Ti', 'RTX 5060',
@@ -14,6 +16,21 @@ const gpuModels = [
   'RX 7600', 'RX 6950 XT', 'RX 6900 XT', 'RX 6800 XT', 'RX 6800', 'RX 6700 XT',
   'Arc B580', 'Arc A770', 'Other',
 ];
+
+// Map UI condition labels to DB enum values
+const CONDITION_MAP = {
+  'New': 'new',
+  'Like New': 'like_new',
+  'Used': 'used',
+  'Open Box': 'open_box',
+};
+
+// Parse VRAM string like '16GB' -> integer 16
+function parseVram(v) {
+  if (!v) return null;
+  const n = parseInt(v, 10);
+  return isNaN(n) ? null : n;
+}
 
 const inputStyle = {
   background: '#f8fafc',
@@ -29,7 +46,11 @@ const inputStyle = {
 
 const SellPage = () => {
   const history = useHistory();
-  const [photos, setPhotos] = useState([]);
+  const { user, loading: authLoading } = useAuth();
+  const categories = useCategories();
+
+  const [photoFiles, setPhotoFiles] = useState([]);   // actual File objects
+  const [photoPreviews, setPhotoPreviews] = useState([]); // blob URLs for display
   const [condition, setCondition] = useState('');
   const [title, setTitle] = useState('');
   const [gpuModel, setGpuModel] = useState('');
@@ -45,11 +66,170 @@ const SellPage = () => {
   const [delivery, setDelivery] = useState(false);
   const fileInputRef = useRef(null);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStep, setSubmitStep] = useState('');   // 'creating' | 'uploading' | 'publishing'
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
   const handlePhotos = (e) => {
     const files = Array.from(e.target.files).slice(0, 10);
+    // Clean up old preview URLs
+    photoPreviews.forEach((url) => URL.revokeObjectURL(url));
     const urls = files.map((f) => URL.createObjectURL(f));
-    setPhotos(urls);
+    setPhotoFiles(files);
+    setPhotoPreviews(urls);
   };
+
+  // Resolve the "Graphics Cards" category id from the loaded categories
+  const getGraphicsCardsCategoryId = () => {
+    const gc = categories.find(
+      (c) => c.name === 'Graphics Cards' || c.slug === 'graphics-cards'
+    );
+    return gc ? gc.id : null;
+  };
+
+  const validate = () => {
+    if (photoFiles.length === 0) return 'Please add at least one photo';
+    if (!condition) return 'Please select a condition';
+    if (!title.trim()) return 'Title is required';
+    if (priceMode === 'For Sale') {
+      if (!price || Number(price) <= 0) return 'Please enter a valid price';
+    }
+    if (!CONDITION_MAP[condition]) return 'Invalid condition selected';
+    return null;
+  };
+
+  const handleSubmit = async () => {
+    setError('');
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSubmitting(true);
+    let createdListingId = null;
+
+    try {
+      // Step 1: Create the listing as a draft
+      setSubmitStep('creating');
+      const categoryId = getGraphicsCardsCategoryId();
+      const listingData = {
+        title: title.trim(),
+        category_id: categoryId,
+        gpu_model: gpuModel || null,
+        brand: brand || null,
+        manufacturer: manufacturer || null,
+        vram_gb: parseVram(vram),
+        description: description.trim() || null,
+        price: priceMode === 'For Free' ? 0 : Number(price),
+        is_fixed_price: fixedPrice,
+        condition: CONDITION_MAP[condition],
+        quantity: multipleQty ? 2 : 1,
+        location: null,
+        allow_meetup: meetup,
+        allow_delivery: delivery,
+      };
+
+      const listing = await createListing(listingData);
+      createdListingId = listing.id;
+
+      // Step 2: Upload images
+      setSubmitStep('uploading');
+      await uploadListingImages(createdListingId, photoFiles);
+
+      // Step 3: Publish (move draft -> pending)
+      setSubmitStep('publishing');
+      await publishListing(createdListingId);
+
+      setSuccess(true);
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+      setSubmitStep('');
+    }
+  };
+
+  // Auth guard
+  if (!authLoading && !user) {
+    return <Redirect to="/login" />;
+  }
+
+  // Success state
+  if (success) {
+    return (
+      <div
+        style={{
+          background: 'radial-gradient(circle at top left, rgba(139, 92, 246, 0.08), transparent 28%), #f6f7fb',
+          color: '#111827',
+          fontFamily: 'Roboto, sans-serif',
+          minHeight: '100vh',
+        }}
+      >
+        <SiteHeader />
+        <div style={{ ...shell, maxWidth: '520px', paddingBottom: '60px', paddingTop: '80px', textAlign: 'center' }}>
+          <div style={{ ...card, padding: '48px 36px' }}>
+            <div
+              style={{
+                alignItems: 'center',
+                background: 'linear-gradient(135deg, #10b981, #34d399)',
+                borderRadius: '50%',
+                color: '#fff',
+                display: 'inline-flex',
+                fontSize: '32px',
+                fontWeight: 700,
+                height: '64px',
+                justifyContent: 'center',
+                marginBottom: '18px',
+                width: '64px',
+              }}
+            >
+              &#10003;
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 10px' }}>
+              Listing submitted!
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.6, margin: '0 0 28px' }}>
+              Your listing is now pending review. Once approved by an admin, it will appear on the marketplace.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => history.push('/user')}
+                style={{
+                  background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                  border: 0,
+                  borderRadius: '12px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  padding: '14px 28px',
+                }}
+              >
+                View my listings
+              </button>
+              <button
+                onClick={() => { setSuccess(false); setPhotoFiles([]); setPhotoPreviews([]); setCondition(''); setTitle(''); setGpuModel(''); setBrand(''); setManufacturer(''); setVram(''); setDescription(''); setMultipleQty(false); setPriceMode('For Sale'); setPrice(''); setFixedPrice(false); setMeetup(false); setDelivery(false); }}
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  padding: '14px 28px',
+                }}
+              >
+                List another GPU
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -152,9 +332,9 @@ const SellPage = () => {
               />
             </div>
 
-            {photos.length > 0 && (
+            {photoPreviews.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
-                {photos.map((url, i) => (
+                {photoPreviews.map((url, i) => (
                   <div key={i} style={{ position: 'relative' }}>
                     <img
                       src={url}
@@ -242,7 +422,7 @@ const SellPage = () => {
                 Select the condition of your GPU
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                {['New', 'Like New', 'Used', 'Open Box', 'Damaged'].map((c) => (
+                {['New', 'Like New', 'Used', 'Open Box'].map((c) => (
                   <span
                     key={c}
                     onClick={() => setCondition(c)}
@@ -508,23 +688,45 @@ const SellPage = () => {
               </div>
             </div>
 
+            {/* Error message */}
+            {error && (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '10px',
+                  color: '#dc2626',
+                  fontSize: '14px',
+                  padding: '12px 16px',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
             {/* List now */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => history.push('/user')}
+                onClick={handleSubmit}
+                disabled={submitting}
                 style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                  background: submitting ? '#a78bfa' : 'linear-gradient(135deg, #8b5cf6, #ec4899)',
                   border: 0,
                   borderRadius: '14px',
-                  boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)',
+                  boxShadow: submitting ? 'none' : '0 8px 20px rgba(139, 92, 246, 0.3)',
                   color: '#fff',
-                  cursor: 'pointer',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
                   fontSize: '17px',
                   fontWeight: 700,
                   padding: '16px 52px',
                 }}
               >
-                List now
+                {submitting
+                  ? submitStep === 'creating' ? 'Creating listing...'
+                    : submitStep === 'uploading' ? 'Uploading photos...'
+                    : submitStep === 'publishing' ? 'Publishing...'
+                    : 'Submitting...'
+                  : 'List now'}
               </button>
             </div>
 

@@ -18,6 +18,10 @@ export async function register({ username, email, password, role, display_name, 
     throw err;
   }
 
+  // Only allow buyer or seller — admin accounts are created via seed/migration only
+  const ALLOWED_ROLES = ['buyer', 'seller'];
+  const safeRole = ALLOWED_ROLES.includes(role) ? role : 'buyer';
+
   const existingEmail = await usersRepository.findByEmail(email);
   if (existingEmail) {
     const err = new Error('Email is already registered');
@@ -38,7 +42,7 @@ export async function register({ username, email, password, role, display_name, 
     username,
     email,
     password_hash,
-    role,
+    role: safeRole,
     display_name,
     phone,
   });

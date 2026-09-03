@@ -10,5 +10,6 @@ router.get('/:id', listingsController.getById);
 router.post('/', requireAuth, listingsController.create);
 router.put('/:id', requireAuth, listingsController.update);
 router.post('/:id/images', requireAuth, upload.array('photos', 10), listingsController.uploadImages);
+router.post('/:id/publish', requireAuth, listingsController.publish);
 
 export default router;

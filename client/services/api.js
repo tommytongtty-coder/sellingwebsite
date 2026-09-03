@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 
+// Guard for SSR where localStorage is not available
+const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+
 // ── Helper: get stored JWT token ─────────────────────────────
 function getToken() {
-  return localStorage.getItem('token');
+  return storage && storage.getItem('token');
 }
 
 function authHeaders() {
@@ -21,7 +24,7 @@ async function apiFetch(url, options = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || body.message || body.detail || 'Request failed');
+    const err = new Error(body.detail || body.message || body.error || 'Request failed');
     err.status = res.status;
     throw err;
   }
@@ -34,7 +37,7 @@ export async function register(data) {
     method: 'POST',
     body: JSON.stringify(data),
   });
-  localStorage.setItem('token', result.token);
+  if (storage) storage.setItem('token', result.token);
   return result;
 }
 
@@ -43,12 +46,12 @@ export async function login(data) {
     method: 'POST',
     body: JSON.stringify(data),
   });
-  localStorage.setItem('token', result.token);
+  if (storage) storage.setItem('token', result.token);
   return result;
 }
 
 export function logout() {
-  localStorage.removeItem('token');
+  if (storage) storage.removeItem('token');
 }
 
 // ── Categories (hook) ─────────────────────────────────────────
@@ -58,7 +61,7 @@ export function useCategories() {
   useEffect(() => {
     fetch('/api/categories')
       .then((r) => r.json())
-      .then((rows) => setCategories(rows.map((r) => r.name)))
+      .then((rows) => setCategories(rows))
       .catch((err) => console.error('Failed to load categories:', err));
   }, []);
 
@@ -114,9 +117,13 @@ export async function uploadListingImages(listingId, files) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || 'Upload failed');
+    throw new Error(body.detail || body.message || body.error || 'Upload failed');
   }
   return res.json();
+}
+
+export async function publishListing(listingId) {
+  return apiFetch(`/api/listings/${listingId}/publish`, { method: 'POST' });
 }
 
 // ── User ──────────────────────────────────────────────────────

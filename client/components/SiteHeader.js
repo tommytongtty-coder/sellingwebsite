@@ -1,10 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import { shell } from '../styles/globals';
 import { useLanguage } from '../i18n';
+import { useAuth } from '../auth';
 
 const SiteHeader = () => {
   const { language, setLanguage, t } = useLanguage();
+  const { user, clearAuth } = useAuth();
+  const history = useHistory();
 
   return (
     <header
@@ -136,23 +139,74 @@ const SiteHeader = () => {
         >
           {t('Sell')}
         </Link>
-        <a href="/" style={{ color: '#cbd5e1', fontSize: '14px', textDecoration: 'none' }}>
-          {t('Log in')}
-        </a>
-        <a
-          href="/"
-          style={{
-            background: '#ffffff',
-            borderRadius: '999px',
-            color: '#111827',
-            fontSize: '14px',
-            fontWeight: 700,
-            padding: '10px 16px',
-            textDecoration: 'none',
-          }}
-        >
-          {t('Sign up')}
-        </a>
+        {user ? (
+          <>
+            <Link
+              to="/user"
+              style={{
+                alignItems: 'center',
+                color: '#fff',
+                display: 'flex',
+                fontSize: '14px',
+                fontWeight: 600,
+                gap: '8px',
+                textDecoration: 'none',
+              }}
+            >
+              <div
+                style={{
+                  alignItems: 'center',
+                  background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  height: '32px',
+                  justifyContent: 'center',
+                  width: '32px',
+                }}
+              >
+                {(user.display_name || user.username || '?')[0].toUpperCase()}
+              </div>
+              {user.display_name || user.username}
+            </Link>
+            <button
+              type="button"
+              onClick={() => { clearAuth(); history.push('/'); }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                borderRadius: '999px',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                fontSize: '13px',
+                padding: '8px 14px',
+              }}
+            >
+              Log out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" style={{ color: '#cbd5e1', fontSize: '14px', textDecoration: 'none' }}>
+              {t('Log in')}
+            </Link>
+            <Link
+              to="/register"
+              style={{
+                background: '#ffffff',
+                borderRadius: '999px',
+                color: '#111827',
+                fontSize: '14px',
+                fontWeight: 700,
+                padding: '10px 16px',
+                textDecoration: 'none',
+              }}
+            >
+              {t('Sign up')}
+            </Link>
+          </>
+        )}
         <button
           type="button"
           onClick={() => setLanguage(language === 'zh-HK' ? 'en' : 'zh-HK')}

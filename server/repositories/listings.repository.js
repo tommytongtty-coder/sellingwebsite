@@ -145,3 +145,9 @@ export async function incrementViews(id) {
     [id]
   );
 }
+
+export async function deleteById(id) {
+  const pool = await getDb();
+  // listing_images are CASCADE-deleted by FK
+  await pool.query('DELETE FROM listings WHERE id = ?', [id]);
+}
