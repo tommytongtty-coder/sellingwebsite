@@ -11,6 +11,7 @@ router.get('/listings/:id', adminController.getListingById);
 router.put('/listings/:id', adminController.updateListing);
 router.post('/listings/:id/approve', adminController.approveListing);
 router.post('/listings/:id/reject', adminController.rejectListing);
+router.post('/listings/:id/chat', adminController.openListingChat);
 router.get('/logs', adminController.getLogs);
 router.get('/conversations', adminController.getConversations);
 

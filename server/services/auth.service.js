@@ -51,6 +51,7 @@ export async function register({ username, email, password, role, display_name, 
   return { token, user };
 }
 
+// `email` may hold either an email address or a username
 export async function login({ email, password }) {
   if (!email || !password) {
     const err = new Error('Email and password are required');
@@ -58,16 +59,18 @@ export async function login({ email, password }) {
     throw err;
   }
 
-  const user = await usersRepository.findByEmail(email);
+  const user = email.includes('@')
+    ? await usersRepository.findByEmail(email)
+    : await usersRepository.findByUsername(email);
   if (!user) {
-    const err = new Error('Invalid email or password');
+    const err = new Error('Invalid credentials');
     err.status = 401;
     throw err;
   }
 
   const isMatch = await bcrypt.compare(password, user.password_hash);
   if (!isMatch) {
-    const err = new Error('Invalid email or password');
+    const err = new Error('Invalid credentials');
     err.status = 401;
     throw err;
   }

@@ -1,4 +1,5 @@
 import * as adminRepository from '../repositories/admin.repository';
+import * as conversationsRepository from '../repositories/conversations.repository';
 
 export async function getAllListings() {
   return adminRepository.getAllListings();
@@ -26,4 +27,27 @@ export async function getLogs() {
 
 export async function getConversations() {
   return adminRepository.getConversations();
+}
+
+// Opens the admin support thread for a listing, or returns the existing one.
+// seller_id is read from the listing rather than taken from the request, and
+// the thread is left empty so the admin writes the first message.
+export async function openListingThread(listingId, adminId) {
+  const listing = await adminRepository.getListingById(listingId);
+  if (!listing) {
+    const err = new Error('Listing not found');
+    err.status = 404;
+    throw err;
+  }
+  if (listing.seller_id === adminId) {
+    const err = new Error('Cannot open a support thread with yourself');
+    err.status = 400;
+    throw err;
+  }
+  return conversationsRepository.create({
+    listing_id: listing.id,
+    buyer_id: adminId,
+    seller_id: listing.seller_id,
+    type: 'admin_support',
+  });
 }

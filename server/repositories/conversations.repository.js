@@ -3,8 +3,12 @@ import { getDb } from '../../database/connection';
 export async function findByUserId(userId) {
   const pool = await getDb();
   const [rows] = await pool.query(
-    `SELECT c.id, c.listing_id, c.buyer_id, c.seller_id, c.updated_at,
-            l.title AS listing_title,
+    `SELECT c.id, c.listing_id, c.buyer_id, c.seller_id, c.type, c.updated_at,
+            l.title AS listing_title, l.price AS listing_price,
+            l.status AS listing_status,
+            (SELECT li.image_url FROM listing_images li
+               WHERE li.listing_id = l.id AND li.is_cover = TRUE
+               LIMIT 1) AS listing_cover,
             CASE WHEN c.buyer_id = ? THEN s.display_name ELSE b.display_name END AS other_user_name,
             CASE WHEN c.buyer_id = ? THEN c.seller_id ELSE c.buyer_id END AS other_user_id,
             m.body AS last_message_body,
@@ -32,7 +36,11 @@ export async function findByUserId(userId) {
 export async function findById(id) {
   const pool = await getDb();
   const [rows] = await pool.query(
-    `SELECT c.*, l.title AS listing_title,
+    `SELECT c.*, l.title AS listing_title, l.price AS listing_price,
+            l.status AS listing_status,
+            (SELECT li.image_url FROM listing_images li
+               WHERE li.listing_id = l.id AND li.is_cover = TRUE
+               LIMIT 1) AS listing_cover,
             b.display_name AS buyer_name, s.display_name AS seller_name
        FROM conversations c
        JOIN listings l ON l.id = c.listing_id
@@ -44,12 +52,13 @@ export async function findById(id) {
   return rows[0];
 }
 
-export async function create({ listing_id, buyer_id, seller_id }) {
+export async function create({ listing_id, buyer_id, seller_id, type = 'buyer_seller' }) {
   const pool = await getDb();
+  // INSERT IGNORE + UNIQUE (listing_id, buyer_id) makes this idempotent
   await pool.query(
-    `INSERT IGNORE INTO conversations (listing_id, buyer_id, seller_id)
-     VALUES (?, ?, ?)`,
-    [listing_id, buyer_id, seller_id]
+    `INSERT IGNORE INTO conversations (listing_id, buyer_id, seller_id, type)
+     VALUES (?, ?, ?, ?)`,
+    [listing_id, buyer_id, seller_id, type]
   );
   const [rows] = await pool.query(
     `SELECT * FROM conversations WHERE listing_id = ? AND buyer_id = ?`,

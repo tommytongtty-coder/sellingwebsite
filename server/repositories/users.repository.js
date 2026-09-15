@@ -18,6 +18,16 @@ export async function findByUsername(username) {
   return rows[0];
 }
 
+// The shop admin that sellers get an automatic support thread with.
+// Resolved by role so no admin user id is ever hardcoded.
+export async function findAdmin() {
+  const pool = await getDb();
+  const [rows] = await pool.query(
+    "SELECT id, username, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1"
+  );
+  return rows[0];
+}
+
 export async function findById(id) {
   const pool = await getDb();
   const [rows] = await pool.query(

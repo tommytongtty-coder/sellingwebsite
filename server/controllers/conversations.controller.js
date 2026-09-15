@@ -9,6 +9,21 @@ export async function getConversations(req, res, next) {
   }
 }
 
+export async function getConversation(req, res, next) {
+  try {
+    const conversation = await conversationsService.getConversationById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    if (conversation.buyer_id !== req.auth.id && conversation.seller_id !== req.auth.id) {
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+    }
+    res.json(conversation);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function createConversation(req, res, next) {
   try {
     const { listing_id, seller_id } = req.body;

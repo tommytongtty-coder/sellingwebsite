@@ -7,3 +7,7 @@ npm-debug.log
 .env
 .env.local
 .env.*.local
+
+# Runtime uploads — keep the folder, not the files
+/uploads/*
+!/uploads/.gitkeep

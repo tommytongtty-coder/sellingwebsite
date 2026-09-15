@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 import { shell, card } from '../styles/globals';
 import { useCategories, useListings } from '../services/api';
 import SiteHeader from '../components/SiteHeader';
+import GpuThumb from '../components/GpuThumb';
 import { useLanguage } from '../i18n';
 
 // ── Static data (not stored in DB) ───────────────────────────
@@ -70,7 +72,6 @@ function formatCondition(c) {
 const HomePage = () => {
   const categories = useCategories();
   const { listings: featuredItems, loading: listingsLoading } = useListings();
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const { t } = useLanguage();
 
   return (
@@ -344,21 +345,17 @@ const HomePage = () => {
               <p style={{ color: '#64748b', gridColumn: '1/-1' }}>{t('Loading listings...')}</p>
             )}
             {featuredItems.map((item) => (
-              <article
+              <Link
                 key={item.id || item.title}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedProduct(item)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setSelectedProduct(item);
-                  }
-                }}
+                to={`/listing/${item.id}`}
                 style={{
                   ...card,
+                  color: 'inherit',
                   cursor: 'pointer',
+                  display: 'block',
                   overflow: 'hidden',
                   padding: '16px',
+                  textDecoration: 'none',
                 }}
               >
                 <div
@@ -387,46 +384,12 @@ const HomePage = () => {
                   </span>
                 </div>
 
-                <div
-                  style={{
-                    alignItems: 'center',
-                    background:
-                      'radial-gradient(circle at top, rgba(139,92,246,0.12), rgba(255,255,255,0.92) 60%)',
-                    border: '1px solid #eef0f6',
-                    borderRadius: '18px',
-                    display: 'flex',
-                    height: '180px',
-                    justifyContent: 'center',
-                    marginBottom: '16px',
-                  }}
-                >
-                  <div
-                    style={{
-                      background: '#111827',
-                      borderRadius: '18px',
-                      boxShadow: '0 18px 26px rgba(15, 23, 42, 0.18)',
-                      height: '112px',
-                      position: 'relative',
-                      transform: 'rotate(-8deg)',
-                      width: '168px',
-                    }}
-                  >
-                    {[18, 64, 110].map((left) => (
-                      <div
-                        key={left}
-                        style={{
-                          background: getAccent(item),
-                          borderRadius: '50%',
-                          boxShadow: `0 0 0 6px ${getAccent(item)}22`,
-                          height: '42px',
-                          left,
-                          position: 'absolute',
-                          top: '35px',
-                          width: '42px',
-                        }}
-                      />
-                    ))}
-                  </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <GpuThumb
+                    src={item.cover_image}
+                    alt={item.title}
+                    accent={getAccent(item)}
+                  />
                 </div>
 
                 <div style={{ color: '#111827', fontSize: '17px', fontWeight: 700, lineHeight: 1.4 }}>
@@ -503,197 +466,51 @@ const HomePage = () => {
                     marginTop: '16px',
                   }}
                 >
-                  <a
-                    href="/"
-                    onClick={(e) => e.stopPropagation()}
+                  {/* Placeholders: buttons rather than links so they do not
+                      nest an anchor inside the card's own link */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     style={{
                       background: '#ffffff',
                       border: '1px solid #dbe1ea',
                       borderRadius: '999px',
                       color: '#111827',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
                       fontSize: '13px',
                       fontWeight: 700,
                       padding: '11px 0',
                       textAlign: 'center',
-                      textDecoration: 'none',
                     }}
                   >
                     {t('Chat')}
-                  </a>
-                  <a
-                    href="/"
-                    onClick={(e) => e.stopPropagation()}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     style={{
                       background: '#111827',
+                      border: 0,
                       borderRadius: '999px',
                       color: '#ffffff',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
                       fontSize: '13px',
                       fontWeight: 700,
                       padding: '11px 0',
                       textAlign: 'center',
-                      textDecoration: 'none',
                     }}
                   >
                     {t('Make Offer')}
-                  </a>
+                  </button>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         </main>
       </div>
     </div>
-      {selectedProduct && (
-        <div
-          onClick={() => setSelectedProduct(null)}
-          style={{
-            alignItems: 'center',
-            background: 'rgba(15, 23, 42, 0.52)',
-            display: 'flex',
-            inset: 0,
-            justifyContent: 'center',
-            padding: '20px',
-            position: 'fixed',
-            zIndex: 50,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              ...card,
-              maxWidth: '560px',
-              overflow: 'hidden',
-              width: '100%',
-            }}
-          >
-            <div
-              style={{
-                alignItems: 'center',
-                background:
-                  'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(255,255,255,0.98))',
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '22px 24px',
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: getAccent(selectedProduct),
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {t(formatCondition(selectedProduct.condition))}
-                </div>
-                <h2 style={{ fontSize: '24px', lineHeight: 1.25, margin: 0 }}>
-                  {selectedProduct.title}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedProduct(null)}
-                aria-label={t('Close product details')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '999px',
-                  color: '#111827',
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  height: '38px',
-                  lineHeight: 1,
-                  width: '38px',
-                }}
-              >
-                x
-              </button>
-            </div>
-
-            <div style={{ padding: '24px' }}>
-              <div
-                style={{
-                  alignItems: 'center',
-                  background:
-                    'radial-gradient(circle at top, rgba(139,92,246,0.12), rgba(255,255,255,0.92) 60%)',
-                  border: '1px solid #eef0f6',
-                  borderRadius: '18px',
-                  display: 'flex',
-                  height: '180px',
-                  justifyContent: 'center',
-                  marginBottom: '20px',
-                }}
-              >
-                <div
-                  style={{
-                    background: '#111827',
-                    borderRadius: '18px',
-                    boxShadow: '0 18px 26px rgba(15, 23, 42, 0.18)',
-                    height: '112px',
-                    position: 'relative',
-                    transform: 'rotate(-8deg)',
-                    width: '168px',
-                  }}
-                >
-                  {[18, 64, 110].map((left) => (
-                    <div
-                      key={left}
-                      style={{
-                        background: getAccent(selectedProduct),
-                        borderRadius: '50%',
-                        boxShadow: `0 0 0 6px ${getAccent(selectedProduct)}22`,
-                        height: '42px',
-                        left,
-                        position: 'absolute',
-                        top: '35px',
-                        width: '42px',
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: '14px' }}>
-                {[
-                  ['Price', formatPrice(selectedProduct.price)],
-                  ['Seller', selectedProduct.seller_name],
-                  ['Condition', formatCondition(selectedProduct.condition)],
-                  ['Location', selectedProduct.location],
-                  ['Deal Type', getDealType(selectedProduct)],
-                  ['Status', selectedProduct.status || 'Active'],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    style={{
-                      alignItems: 'center',
-                      borderBottom: '1px solid #eef2f7',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      paddingBottom: '12px',
-                    }}
-                  >
-                    <span style={{ color: '#64748b', fontSize: '14px' }}>{t(label)}</span>
-                    <span
-                      style={{
-                        background: label === 'Status' ? '#d1fae5' : 'transparent',
-                        borderRadius: label === 'Status' ? '999px' : 0,
-                        color: label === 'Status' ? '#10b981' : '#111827',
-                        fontSize: '15px',
-                        fontWeight: 700,
-                        padding: label === 'Status' ? '7px 12px' : 0,
-                      }}
-                    >
-                      {t(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

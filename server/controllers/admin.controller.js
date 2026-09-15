@@ -57,6 +57,15 @@ export async function getLogs(req, res, next) {
   }
 }
 
+export async function openListingChat(req, res, next) {
+  try {
+    const conversation = await adminService.openListingThread(req.params.id, req.auth.id);
+    res.json(conversation);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getConversations(req, res, next) {
   try {
     const conversations = await adminService.getConversations();

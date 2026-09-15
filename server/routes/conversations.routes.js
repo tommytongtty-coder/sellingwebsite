@@ -6,6 +6,7 @@ const router = Router();
 
 router.get('/', requireAuth, conversationsController.getConversations);
 router.post('/', requireAuth, conversationsController.createConversation);
+router.get('/:id', requireAuth, conversationsController.getConversation);
 router.get('/:id/messages', requireAuth, conversationsController.getMessages);
 router.post('/:id/messages', requireAuth, conversationsController.sendMessage);
 router.patch('/:id/read', requireAuth, conversationsController.markAsRead);

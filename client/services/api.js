@@ -183,6 +183,10 @@ export async function getConversations() {
   return apiFetch('/api/conversations');
 }
 
+export async function getConversation(id) {
+  return apiFetch(`/api/conversations/${id}`);
+}
+
 export async function createConversation(listingId) {
   return apiFetch('/api/conversations', {
     method: 'POST',
@@ -214,33 +218,106 @@ export async function createReport(data) {
 }
 
 // ── Admin ─────────────────────────────────────────────────────
+// The console keeps its own session under ADMIN_TOKEN_KEY so that signing in
+// as an admin never disturbs the shopper's session (and vice versa).
+export const ADMIN_TOKEN_KEY = 'admin_token';
+
+export function getAdminToken() {
+  return storage && storage.getItem(ADMIN_TOKEN_KEY);
+}
+
+function adminFetch(url, options = {}) {
+  const token = getAdminToken();
+  // Fail closed: never let the shopper's token reach an admin endpoint
+  if (!token) {
+    const err = new Error('Not signed in as an admin');
+    err.status = 401;
+    return Promise.reject(err);
+  }
+  return apiFetch(url, {
+    ...options,
+    // Listed after options.headers spread inside apiFetch would lose, so the
+    // admin token is applied here and overrides the shopper's Authorization
+    headers: { ...options.headers, Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function adminLogin({ username, password }) {
+  // The login endpoint takes a username or an email in the `email` field
+  const result = await apiFetch('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: username, password }),
+  });
+  if (result.user && result.user.role !== 'admin') {
+    const err = new Error('That account is not an admin');
+    err.status = 403;
+    throw err;
+  }
+  if (storage) storage.setItem(ADMIN_TOKEN_KEY, result.token);
+  return result;
+}
+
+export function adminLogout() {
+  if (storage) storage.removeItem(ADMIN_TOKEN_KEY);
+}
+
+export async function adminGetMe() {
+  return adminFetch('/api/users/me');
+}
+
 export async function adminGetListings() {
-  return apiFetch('/api/admin/listings');
+  return adminFetch('/api/admin/listings');
 }
 
 export async function adminGetListing(id) {
-  return apiFetch(`/api/admin/listings/${id}`);
+  return adminFetch(`/api/admin/listings/${id}`);
 }
 
 export async function adminUpdateListing(id, data) {
-  return apiFetch(`/api/admin/listings/${id}`, {
+  return adminFetch(`/api/admin/listings/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 }
 
 export async function adminApproveListing(id) {
-  return apiFetch(`/api/admin/listings/${id}/approve`, { method: 'POST' });
+  return adminFetch(`/api/admin/listings/${id}/approve`, { method: 'POST' });
 }
 
 export async function adminRejectListing(id) {
-  return apiFetch(`/api/admin/listings/${id}/reject`, { method: 'POST' });
+  return adminFetch(`/api/admin/listings/${id}/reject`, { method: 'POST' });
 }
 
 export async function adminGetLogs() {
-  return apiFetch('/api/admin/logs');
+  return adminFetch('/api/admin/logs');
 }
 
 export async function adminGetConversations() {
-  return apiFetch('/api/admin/conversations');
+  return adminFetch('/api/admin/conversations');
+}
+
+// Get-or-create the admin support thread for a listing
+export async function adminOpenListingChat(listingId) {
+  return adminFetch(`/api/admin/listings/${listingId}/chat`, { method: 'POST' });
+}
+
+// The admin is a participant on its support threads (it holds buyer_id), so
+// the regular conversation endpoints work — they just need the admin token.
+export async function adminGetConversation(id) {
+  return adminFetch(`/api/conversations/${id}`);
+}
+
+export async function adminGetMessages(conversationId) {
+  return adminFetch(`/api/conversations/${conversationId}/messages`);
+}
+
+export async function adminSendMessage(conversationId, body) {
+  return adminFetch(`/api/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function adminMarkAsRead(conversationId) {
+  return adminFetch(`/api/conversations/${conversationId}/read`, { method: 'PATCH' });
 }

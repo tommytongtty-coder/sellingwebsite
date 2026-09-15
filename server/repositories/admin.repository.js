@@ -30,7 +30,23 @@ export async function getListingById(id) {
   return rows[0];
 }
 
+// Columns an admin may edit from the console. Keys are validated against this
+// list because they are interpolated into the SET clause as column names and
+// cannot be passed as query parameters.
+const EDITABLE_COLUMNS = [
+  'title', 'price', 'condition', 'location', 'gpu_model', 'brand',
+  'manufacturer', 'vram_gb', 'description', 'quantity', 'status',
+  'is_certified', 'is_fixed_price', 'allow_meetup', 'allow_delivery',
+];
+
 export async function updateListing(id, data, adminId) {
+  const entries = Object.entries(data).filter(([key]) => EDITABLE_COLUMNS.includes(key));
+  if (entries.length === 0) {
+    const err = new Error('No editable fields provided');
+    err.status = 400;
+    throw err;
+  }
+
   const pool = await getDb();
   const conn = await pool.getConnection();
   try {
@@ -38,8 +54,8 @@ export async function updateListing(id, data, adminId) {
 
     const [before] = await conn.query('SELECT * FROM listings WHERE id = ?', [id]);
 
-    const fields = Object.keys(data).map((k) => `\`${k}\` = ?`).join(', ');
-    const values = Object.values(data);
+    const fields = entries.map(([key]) => `\`${key}\` = ?`).join(', ');
+    const values = entries.map(([, value]) => value);
     await conn.query(`UPDATE listings SET ${fields} WHERE id = ?`, [...values, id]);
 
     const [after] = await conn.query('SELECT * FROM listings WHERE id = ?', [id]);
@@ -131,11 +147,26 @@ export async function getConversations() {
     `SELECT cv.*,
             b.display_name AS buyer_name,
             s.display_name AS seller_name,
-            l.title AS listing_title
+            l.title AS listing_title,
+            l.price AS listing_price,
+            l.status AS listing_status,
+            (SELECT li.image_url FROM listing_images li
+               WHERE li.listing_id = l.id AND li.is_cover = TRUE
+               LIMIT 1) AS listing_cover,
+            m.body AS last_message_body,
+            m.created_at AS last_message_time,
+            (SELECT COUNT(*) FROM messages
+              WHERE conversation_id = cv.id AND sender_id != cv.buyer_id AND is_read = FALSE
+            ) AS unread_count
        FROM conversations cv
        LEFT JOIN users b ON b.id = cv.buyer_id
        LEFT JOIN users s ON s.id = cv.seller_id
        LEFT JOIN listings l ON l.id = cv.listing_id
+       LEFT JOIN messages m ON m.id = (
+         SELECT m2.id FROM messages m2
+          WHERE m2.conversation_id = cv.id
+          ORDER BY m2.created_at DESC LIMIT 1
+       )
       ORDER BY cv.updated_at DESC`
   );
   return rows;

@@ -1,9 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { shell, card } from '../styles/globals';
-import { useListings } from '../services/api';
-import SiteHeader from '../components/SiteHeader';
+import {
+  adminGetListings,
+  adminGetLogs,
+  adminUpdateListing,
+  adminApproveListing,
+  adminRejectListing,
+  adminGetConversations,
+  adminOpenListingChat,
+  adminGetMessages,
+  adminSendMessage,
+  adminMarkAsRead,
+} from '../services/api';
+import AdminHeader from '../components/AdminHeader';
+import AdminLogin from '../components/AdminLogin';
+import MessageThread from '../components/MessageThread';
+import StatusTag from '../components/StatusTag';
+import { useAdminAuth } from '../adminAuth';
 import { useLanguage } from '../i18n';
 
 const adminDetailFields = [
@@ -15,6 +29,28 @@ const adminDetailFields = [
   { key: 'gpu_model', label: 'GPU Model' },
   { key: 'status', label: 'Status' },
 ];
+
+// The two states the admin moderates between. 'active' is labelled "Approve"
+// in the UI because that is the action, while the DB stores the resulting state.
+const MODERATION_STATUSES = ['pending', 'active'];
+
+function formatStatusLabel(status) {
+  if (!status) return '';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+const fieldInputStyle = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  boxSizing: 'border-box',
+  color: '#111827',
+  fontFamily: 'inherit',
+  fontSize: '15px',
+  outline: 'none',
+  padding: '11px 12px',
+  width: '100%',
+};
 
 // Helper: derive a UI accent color from listing id
 const accentColors = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#ef4444'];
@@ -44,31 +80,106 @@ function formatCondition(c) {
 }
 
 const AdminPage = () => {
-  const { listings: dbListings } = useListings();
+  const { admin, loading: adminLoading, signIn, signOut } = useAdminAuth();
   const [adminItems, setAdminItems] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [openThreadId, setOpenThreadId] = useState(null);
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeAdminTab, setActiveAdminTab] = useState('All Product');
+  const [search, setSearch] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
   const { t } = useLanguage();
 
-  // Sync adminItems when DB listings load
-  useEffect(() => {
-    if (dbListings.length > 0) setAdminItems(dbListings);
-  }, [dbListings]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const adminTabs = ['All Product', 'Messages'];
-  const buyerItems = adminItems.slice(0, 4).map((item) => ({
-    ...item,
-    status: 'Active',
-  }));
+  const loadListings = useCallback(() => {
+    adminGetListings()
+      .then((rows) => { setAdminItems(rows); setLoadError(''); })
+      .catch((err) => setLoadError(err.message || 'Failed to load listings'));
+  }, []);
 
-  const handlePriceChange = (title, nextPrice) => {
+  useEffect(() => { if (admin) loadListings(); }, [admin, loadListings]);
+
+  useEffect(() => {
+    if (!admin || activeAdminTab !== 'Logs' || logs.length > 0) return;
+    adminGetLogs()
+      .then((rows) => setLogs(rows))
+      .catch((err) => setActionError(err.message || 'Failed to load logs'));
+  }, [admin, activeAdminTab, logs.length]);
+
+  const loadConversations = useCallback(() => {
+    adminGetConversations()
+      .then((rows) => setConversations(rows))
+      .catch((err) => setActionError(err.message || 'Failed to load conversations'));
+  }, []);
+
+  useEffect(() => {
+    if (!admin || activeAdminTab !== 'Messages') return;
+    loadConversations();
+  }, [admin, activeAdminTab, loadConversations]);
+
+  const loadThread = useCallback((conversationId) => (
+    adminGetMessages(conversationId)
+      .then((rows) => setThreadMessages(rows))
+      .catch((err) => setActionError(err.message || 'Failed to load messages'))
+  ), []);
+
+  const openThreadById = useCallback((conversationId) => {
+    setOpenThreadId(conversationId);
+    setThreadMessages([]);
+    setActionError('');
+    return loadThread(conversationId).then(() => {
+      adminMarkAsRead(conversationId).then(loadConversations).catch(() => {});
+    });
+  }, [loadThread, loadConversations]);
+
+  // Collapse an open thread, or open it and clear its unread badge
+  const openThread = (conv) => {
+    if (openThreadId === conv.id) {
+      setOpenThreadId(null);
+      setThreadMessages([]);
+      return;
+    }
+    openThreadById(conv.id);
+  };
+
+  // From the product detail card: open (or create) that listing's thread and
+  // jump to it in the Messages tab
+  const chatAboutProduct = () => {
+    if (!selectedProduct) return;
+    setActionError('');
+    adminOpenListingChat(selectedProduct.id)
+      .then((conv) => {
+        setSelectedProduct(null);
+        setActiveAdminTab('Messages');
+        loadConversations();
+        return openThreadById(conv.id);
+      })
+      .catch((err) => setActionError(err.message || 'Could not open chat'));
+  };
+
+  const adminTabs = ['All Product', 'Messages', 'Logs'];
+
+  // Filter by title, seller, or listing id
+  const query = search.trim().toLowerCase();
+  const visibleItems = query
+    ? adminItems.filter((item) =>
+        String(item.id) === query ||
+        (item.title || '').toLowerCase().includes(query) ||
+        (item.seller_name || '').toLowerCase().includes(query)
+      )
+    : adminItems;
+
+  const handlePriceChange = (id, nextPrice) => {
     setAdminItems((items) =>
-      items.map((item) => (item.title === title ? { ...item, price: nextPrice } : item))
+      items.map((item) => (item.id === id ? { ...item, price: nextPrice } : item))
     );
   };
 
-  const openProductDetail = (item) => {
-    setSelectedProduct({ ...item, originalTitle: item.title });
-  };
+  // originalStatus lets save tell an intentional moderation change apart from
+  // a status the admin never touched
+  const openProductDetail = (item) => setSelectedProduct({ ...item, originalStatus: item.status });
 
   const closeProductDetail = () => setSelectedProduct(null);
 
@@ -76,23 +187,49 @@ const AdminPage = () => {
     setSelectedProduct((product) => (product ? { ...product, [key]: value } : product));
   };
 
-  const saveProductDetail = () => {
+  // Each action persists server-side and is written to admin_logs, then we
+  // refetch so the table reflects what the database actually holds
+  const runAction = (action) => {
     if (!selectedProduct) return;
-    const { originalTitle, ...updatedProduct } = selectedProduct;
-    setAdminItems((items) =>
-      items.map((item) => (item.title === originalTitle ? updatedProduct : item))
-    );
-    setSelectedProduct(null);
+    setActionError('');
+    action(selectedProduct)
+      .then(() => { setSelectedProduct(null); setLogs([]); loadListings(); })
+      .catch((err) => setActionError(err.message || 'Action failed'));
   };
 
-  const approveProductDetail = () => {
-    if (!selectedProduct) return;
-    const { originalTitle, ...updatedProduct } = { ...selectedProduct, condition: 'approved' };
-    setAdminItems((items) =>
-      items.map((item) => (item.title === originalTitle ? updatedProduct : item))
-    );
-    setSelectedProduct(null);
-  };
+  // Saves the edited fields, then applies a moderation change if the admin
+  // switched the Status dropdown. Choosing "Approve" runs the real approve
+  // action (sets active + certified, logs 'approve_listing') and runs last so
+  // its write is not overwritten by the field update.
+  const saveProductDetail = () => runAction((product) => {
+    const statusChanged = product.status !== product.originalStatus;
+    const approving = statusChanged && product.status === 'active';
+
+    const fields = {
+      title: product.title,
+      price: product.price,
+      condition: product.condition,
+      location: product.location,
+      gpu_model: product.gpu_model,
+    };
+    // Only touch status when it was deliberately changed to something other
+    // than Approve; untouched statuses are left exactly as they were
+    if (statusChanged && !approving) fields.status = product.status;
+
+    return adminUpdateListing(product.id, fields)
+      .then(() => (approving ? adminApproveListing(product.id) : null));
+  });
+
+  const rejectProductDetail = () => runAction((product) => adminRejectListing(product.id));
+
+  // Wait for any stored admin token to be validated before deciding what to show
+  if (adminLoading) {
+    return <div style={{ background: '#0b1020', minHeight: '100vh' }} />;
+  }
+
+  if (!admin) {
+    return <AdminLogin onSignIn={signIn} />;
+  }
 
   return (
     <div
@@ -104,14 +241,34 @@ const AdminPage = () => {
         minHeight: '100vh',
       }}
     >
-    <SiteHeader />
+    <AdminHeader
+      tabs={adminTabs}
+      activeTab={activeAdminTab}
+      onTabChange={setActiveAdminTab}
+      search={search}
+      onSearchChange={setSearch}
+      admin={admin}
+      onSignOut={signOut}
+    />
 
     <div style={{ ...shell, paddingBottom: '60px', paddingTop: '28px' }}>
-      <div style={{ color: '#7c3aed', fontSize: '13px', fontWeight: 700, marginBottom: '18px' }}>
-        <Link to="/" style={{ color: '#7c3aed', textDecoration: 'none' }}>{t('Listings')}</Link>
-        {' / '}
-        <span style={{ color: '#111827' }}>{t('Admin Page')}</span>
-      </div>
+      {(loadError || actionError) && (
+        <div
+          style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '14px',
+            color: '#b91c1c',
+            fontSize: '14px',
+            fontWeight: 600,
+            lineHeight: 1.6,
+            marginBottom: '18px',
+            padding: '16px 18px',
+          }}
+        >
+          {loadError || actionError}
+        </div>
+      )}
 
       <section style={{ ...card, overflow: 'hidden' }}>
         <div
@@ -139,38 +296,8 @@ const AdminPage = () => {
               padding: '10px 14px',
             }}
           >
-            {adminItems.length} {t('products')}
+            {visibleItems.length} {t('products')}
           </div>
-        </div>
-
-        <div
-          style={{
-            borderBottom: '1px solid #eef2f7',
-            display: 'flex',
-            gap: '4px',
-            padding: '0 26px',
-          }}
-        >
-          {adminTabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveAdminTab(tab)}
-              style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: activeAdminTab === tab ? '3px solid #8b5cf6' : '3px solid transparent',
-                color: activeAdminTab === tab ? '#8b5cf6' : '#64748b',
-                cursor: 'pointer',
-                fontSize: '15px',
-                fontWeight: activeAdminTab === tab ? 700 : 500,
-                marginBottom: '-2px',
-                padding: '14px 20px',
-              }}
-            >
-              {t(tab)}
-            </button>
-          ))}
         </div>
 
         {activeAdminTab === 'All Product' && (
@@ -178,7 +305,7 @@ const AdminPage = () => {
           <table style={{ borderCollapse: 'collapse', minWidth: '960px', width: '100%' }}>
             <thead>
               <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
-                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Waiting List'].map((heading) => (
+                {['Product', 'Seller', 'Price', 'Condition', 'Location', 'Deal Type', 'Certified?', 'Status'].map((heading) => (
                   <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
                     {t(heading)}
                   </th>
@@ -186,8 +313,8 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {adminItems.map((item) => (
-                <tr key={item.title} style={{ borderTop: '1px solid #eef2f7' }}>
+              {visibleItems.map((item) => (
+                <tr key={item.id} style={{ borderTop: '1px solid #eef2f7' }}>
                   <td style={{ padding: '18px' }}>
                     <div style={{ alignItems: 'center', display: 'flex', gap: '12px' }}>
                       <div
@@ -220,7 +347,7 @@ const AdminPage = () => {
                           {item.title}
                         </button>
                         <div style={{ color: '#64748b', fontSize: '12px', marginTop: '4px' }}>
-                          {item.status}
+                          #{item.id}
                         </div>
                       </div>
                     </div>
@@ -231,7 +358,7 @@ const AdminPage = () => {
                       type="text"
                       aria-label={`Price for ${item.title}`}
                       value={item.price}
-                      onChange={(e) => handlePriceChange(item.title, e.target.value)}
+                      onChange={(e) => handlePriceChange(item.id, e.target.value)}
                       style={{
                         background: '#f8fafc',
                         border: '1px solid #e2e8f0',
@@ -261,22 +388,7 @@ const AdminPage = () => {
                     />
                   </td>
                   <td style={{ padding: '18px' }}>
-                    <button
-                      type="button"
-                      aria-label={`Waiting List ${item.title}`}
-                      style={{
-                        background: '#f4f959',
-                        border: '1px solid #fecaca',
-                        borderRadius: '999px',
-                        color: '#000000',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        padding: '9px 14px',
-                      }}
-                    >
-                      Pending
-                    </button>
+                    <StatusTag status={item.status} />
                   </td>
                 </tr>
               ))}
@@ -287,93 +399,155 @@ const AdminPage = () => {
 
         {activeAdminTab === 'Messages' && (
           <div style={{ display: 'grid', gap: '14px', padding: '24px 26px' }}>
-            {buyerItems.map((item) => (
+            {conversations.length === 0 && (
+              <div style={{ color: '#94a3b8', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
+                {t('No conversations yet')}
+              </div>
+            )}
+
+            {conversations.map((conv) => (
               <div
-                key={item.title}
+                key={conv.id}
                 style={{
-                  alignItems: 'center',
                   background: '#ffffff',
                   border: '1px solid #eef2f7',
                   borderRadius: '16px',
-                  display: 'grid',
-                  gap: '18px',
-                  gridTemplateColumns: 'minmax(0, 1fr) 130px minmax(220px, 1fr) 110px 170px 140px',
-                  padding: '16px 18px',
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ alignItems: 'center', display: 'flex', gap: '12px', minWidth: 0 }}>
-                  <div
-                    style={{
-                      background: getAccent(item),
-                      borderRadius: '12px',
-                      boxShadow: `0 0 0 6px ${getAccent(item)}18`,
-                      flexShrink: 0,
-                      height: '38px',
-                      width: '38px',
-                    }}
-                  />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
-                      {item.title}
+                <button
+                  type="button"
+                  onClick={() => openThread(conv)}
+                  style={{
+                    alignItems: 'center',
+                    background: 'none',
+                    border: 0,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    fontFamily: 'inherit',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                >
+                  {conv.listing_cover ? (
+                    <img
+                      src={conv.listing_cover}
+                      alt=""
+                      style={{ borderRadius: '12px', flexShrink: 0, height: '44px', objectFit: 'cover', width: '44px' }}
+                    />
+                  ) : (
+                    <div style={{ background: '#f1f5f9', borderRadius: '12px', flexShrink: 0, height: '44px', width: '44px' }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
+                      <span
+                        style={{
+                          color: '#111827',
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {conv.listing_title}
+                      </span>
+                      <StatusTag status={conv.listing_status} size="sm" />
                     </div>
-                    <div style={{ color: '#64748b', fontSize: '13px', marginTop: '4px' }}>
-                      {item.seller_name}
+                    <div style={{ color: '#64748b', fontSize: '13px', marginTop: '3px' }}>
+                      {conv.seller_name}
+                      {conv.type === 'admin_support' ? ` \u00b7 ${t('Support')}` : ''}
                     </div>
                   </div>
-                </div>
-                <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700 }}>
-                  {formatPrice(item.price)}
-                </div>
-                <div style={{ color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
-                  {t("I'm interested! I have make a appointment to the shop.")}
-                </div>
-                <div
-                  style={{
-                    background: '#d1fae5',
-                    borderRadius: '999px',
-                    color: '#10b981',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    padding: '8px 12px',
-                    textAlign: 'center',
-                  }}
-                >
-                  {t(item.status)}
-                </div>
-                <button
-                  type="button"
-                  aria-label={`View appointment for ${item.title}`}
-                  style={{
-                    background: '#ede9fe',
-                    border: '1px solid #ddd6fe',
-                    borderRadius: '999px',
-                    color: '#7c3aed',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    padding: '9px 12px',
-                  }}
-                >
-                  {t('View the Appointment')}
+                  <div
+                    style={{
+                      color: '#475569',
+                      fontSize: '13px',
+                      maxWidth: '280px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {conv.last_message_body || t('No messages yet.')}
+                  </div>
+                  <div style={{ color: '#111827', fontSize: '15px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
+                    {formatPrice(conv.listing_price)}
+                  </div>
+                  {Number(conv.unread_count) > 0 && (
+                    <span
+                      style={{
+                        background: '#ec4899',
+                        borderRadius: '999px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                      }}
+                    >
+                      {conv.unread_count}
+                    </span>
+                  )}
+                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    {openThreadId === conv.id ? '\u25b2' : '\u25bc'}
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  aria-label={`Replay to buyer for ${item.title}`}
-                  style={{
-                    background: '#111827',
-                    border: '1px solid #111827',
-                    borderRadius: '999px',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    padding: '9px 12px',
-                  }}
-                >
-                  {t('Reply to buyer')}
-                </button>
+
+                {openThreadId === conv.id && (
+                  <div style={{ borderTop: '1px solid #eef2f7' }}>
+                    <MessageThread
+                      messages={threadMessages}
+                      currentUserId={admin.id}
+                      onSend={(body) => adminSendMessage(conv.id, body).then(() => loadThread(conv.id))}
+                      height="320px"
+                    />
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {activeAdminTab === 'Logs' && (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', minWidth: '760px', width: '100%' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', color: '#64748b', fontSize: '12px', textAlign: 'left' }}>
+                  {['When', 'Admin', 'Action', 'Target'].map((heading) => (
+                    <th key={heading} style={{ padding: '14px 18px', textTransform: 'uppercase' }}>
+                      {t(heading)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id} style={{ borderTop: '1px solid #eef2f7' }}>
+                    <td style={{ color: '#475569', fontSize: '14px', padding: '16px 18px' }}>
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td style={{ color: '#111827', fontSize: '14px', fontWeight: 700, padding: '16px 18px' }}>
+                      {log.admin_name || log.admin_id}
+                    </td>
+                    <td style={{ color: '#475569', fontSize: '14px', padding: '16px 18px' }}>
+                      {log.action}
+                    </td>
+                    <td style={{ color: '#64748b', fontSize: '14px', padding: '16px 18px' }}>
+                      {log.target_table} #{log.target_id}
+                    </td>
+                  </tr>
+                ))}
+                {logs.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ color: '#94a3b8', fontSize: '14px', padding: '26px', textAlign: 'center' }}>
+                      {t('No admin activity yet.')}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
@@ -469,24 +643,58 @@ const AdminPage = () => {
                 <span style={{ color: '#475569', fontSize: '13px', fontWeight: 700 }}>
                   {t(field.label)}
                 </span>
-                <input
-                  type="text"
-                  value={selectedProduct[field.key] || ''}
-                  onChange={(e) => handleProductDetailChange(field.key, e.target.value)}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    color: '#111827',
-                    fontFamily: 'inherit',
-                    fontSize: '15px',
-                    outline: 'none',
-                    padding: '11px 12px',
-                    width: '100%',
-                  }}
-                />
+                {field.key === 'status' ? (
+                  <select
+                    value={selectedProduct.status || 'pending'}
+                    onChange={(e) => handleProductDetailChange('status', e.target.value)}
+                    style={fieldInputStyle}
+                  >
+                    <option value="pending">{t('Pending')}</option>
+                    <option value="active">{t('Approve')}</option>
+                    {/* Shown only so the card never misreports the stored value */}
+                    {!MODERATION_STATUSES.includes(selectedProduct.status) && (
+                      <option value={selectedProduct.status}>
+                        {formatStatusLabel(selectedProduct.status)}
+                      </option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={selectedProduct[field.key] || ''}
+                    onChange={(e) => handleProductDetailChange(field.key, e.target.value)}
+                    style={fieldInputStyle}
+                  />
+                )}
               </label>
             ))}
+
+            <button
+              type="button"
+              onClick={chatAboutProduct}
+              style={{
+                alignItems: 'center',
+                background: '#ede9fe',
+                border: '1px solid #ddd6fe',
+                borderRadius: '12px',
+                color: '#7c3aed',
+                cursor: 'pointer',
+                display: 'flex',
+                fontFamily: 'inherit',
+                fontSize: '15px',
+                fontWeight: 700,
+                gap: '8px',
+                justifyContent: 'center',
+                marginTop: '6px',
+                padding: '13px',
+                width: '100%',
+              }}
+            >
+              {t('Chat')}
+              <span style={{ fontSize: '13px', fontWeight: 500 }}>
+                {'\u00b7'} {selectedProduct.seller_name}
+              </span>
+            </button>
           </div>
 
           <div
@@ -516,19 +724,19 @@ const AdminPage = () => {
             </button>
             <button
               type="button"
-              onClick={approveProductDetail}
+              onClick={rejectProductDetail}
               style={{
-                background: '#10b981',
-                border: '1px solid #10b981',
+                background: '#ffffff',
+                border: '1px solid #fecaca',
                 borderRadius: '999px',
-                color: '#ffffff',
+                color: '#e11d48',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 700,
                 padding: '11px 18px',
               }}
             >
-              {t('Approve')}
+              {t('Reject')}
             </button>
             <button
               type="button"

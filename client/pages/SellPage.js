@@ -72,12 +72,19 @@ const SellPage = () => {
   const [success, setSuccess] = useState(false);
 
   const handlePhotos = (e) => {
-    const files = Array.from(e.target.files).slice(0, 10);
-    // Clean up old preview URLs
-    photoPreviews.forEach((url) => URL.revokeObjectURL(url));
+    const room = 10 - photoFiles.length;
+    const files = Array.from(e.target.files).slice(0, Math.max(room, 0));
     const urls = files.map((f) => URL.createObjectURL(f));
-    setPhotoFiles(files);
-    setPhotoPreviews(urls);
+    setPhotoFiles((prev) => [...prev, ...files]);
+    setPhotoPreviews((prev) => [...prev, ...urls]);
+    // Allow re-selecting the same file after it has been removed
+    e.target.value = '';
+  };
+
+  const removePhoto = (index) => {
+    URL.revokeObjectURL(photoPreviews[index]);
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Resolve the "Graphics Cards" category id from the loaded categories
@@ -138,10 +145,15 @@ const SellPage = () => {
       setSubmitStep('uploading');
       await uploadListingImages(createdListingId, photoFiles);
 
-      // Step 3: Publish (move draft -> pending)
+      // Step 3: Publish (move draft -> pending). This also opens the seller's
+      // support thread with the shop admin and returns its id.
       setSubmitStep('publishing');
-      await publishListing(createdListingId);
+      const published = await publishListing(createdListingId);
 
+      if (published && published.conversation_id) {
+        history.push(`/chat/${published.conversation_id}`);
+        return;
+      }
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -346,6 +358,35 @@ const SellPage = () => {
                         width: '80px',
                       }}
                     />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePhoto(i);
+                      }}
+                      title="Remove photo"
+                      style={{
+                        alignItems: 'center',
+                        background: 'rgba(15,23,42,0.7)',
+                        border: 0,
+                        borderRadius: '50%',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        height: '20px',
+                        justifyContent: 'center',
+                        lineHeight: 1,
+                        padding: 0,
+                        position: 'absolute',
+                        right: '4px',
+                        top: '4px',
+                        width: '20px',
+                      }}
+                    >
+                      &#215;
+                    </button>
                     {i === 0 && (
                       <div
                         style={{
