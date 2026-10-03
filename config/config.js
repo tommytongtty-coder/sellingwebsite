@@ -7,6 +7,7 @@ const config = {
     user: process.env.MYSQL_USER || 'root',
     password: process.env.MYSQL_PASSWORD || 'root',
     database: process.env.MYSQL_DATABASE || 'marketplace',
+    ssl: String(process.env.MYSQL_SSL || '').toLowerCase() === 'true',
   },
   jwtSecret: process.env.JWT_SECRET || 'marketplace-dev-secret-key-change-in-production',
   stripe: {

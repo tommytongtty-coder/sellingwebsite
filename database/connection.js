@@ -11,6 +11,7 @@ export async function getDb() {
       user: config.mysql.user,
       password: config.mysql.password,
       database: config.mysql.database,
+      ssl: config.mysql.ssl ? { rejectUnauthorized: false } : undefined,
       waitForConnections: true,
       connectionLimit: 10,
     });
