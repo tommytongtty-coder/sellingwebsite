@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 
-// Guard for SSR where localStorage is not available
-const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+// Guard for SSR / Node.js (Node 25+ exposes a non-browser localStorage global)
+const storage =
+  typeof window !== 'undefined' &&
+  window.localStorage &&
+  typeof window.localStorage.getItem === 'function'
+    ? window.localStorage
+    : null;
 
 // ── Helper: get stored JWT token ─────────────────────────────
 function getToken() {

@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getMe } from './services/api';
 
-// Guard for SSR where localStorage is not available
-const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+// Guard for SSR / Node.js (Node 25+ exposes a non-browser localStorage global)
+const storage =
+  typeof window !== 'undefined' &&
+  window.localStorage &&
+  typeof window.localStorage.getItem === 'function'
+    ? window.localStorage
+    : null;
 
 const AuthContext = createContext({
   user: null,
