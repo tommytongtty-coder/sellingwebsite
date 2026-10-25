@@ -4,11 +4,7 @@
 -- Safe to re-run: uses DROP IF EXISTS + IF NOT EXISTS.
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS marketplace
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE marketplace;
+-- NOTE: This file runs against whatever database the connection is pointed at (via .env).
 
 -- ── Drop old tables (reverse FK order) ───────────────────────
 SET FOREIGN_KEY_CHECKS = 0;

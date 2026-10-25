@@ -8,7 +8,7 @@
 -- The login endpoint accepts a username or an email address.
 -- password_hash = bcrypt('123123', 10 rounds)
 
-USE marketplace;
+-- Runs against the database selected by the connection (via .env).
 
 UPDATE users
    SET username      = 'admin01',

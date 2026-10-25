@@ -8,7 +8,6 @@ Backend layering: `routes/` → `controllers/` → `services/` → `repositories
 ## Running the app
 
 ```bash
-npm run db:start      # start MAMP MySQL (must be running first)
 npm run development   # start dev server on port 3000
 ```
 
@@ -21,21 +20,19 @@ markup. Symptom: your change compiles fine but the page looks unchanged.
 lsof -ti :3000 | xargs kill -9 && npm run development
 ```
 
-## Database (MAMP MySQL)
+## Database (Remote MySQL)
 
-MySQL runs via MAMP on port **8889** (not the standard 3306). Credentials and DB name are in `.env`.
+MySQL is hosted remotely. Connection details (host, port, user, password, database) are in `.env`.
 
 ```bash
-npm run db:start    # start MySQL
-npm run db:stop     # stop MySQL
-npm run db:status   # check if MySQL is up
-npm run db:shell    # open SQL shell on the marketplace database
+npm run db:inspect   # check connection and schema status
+npm run db:setup     # initial setup (schema + migrations, empty database only)
+npm run db:setup:full # setup with demo seed data + admin account
 ```
 
 ## Common issues
 
-- **`ECONNREFUSED 127.0.0.1:8889`** — MAMP MySQL is not running. Run `npm run db:start`.
-  Note that having the MAMP app open does *not* mean the MySQL service is started.
+- **`ECONNREFUSED`** — check that `MYSQL_HOST`, `MYSQL_PORT` in `.env` are correct and the remote DB is reachable.
 - **`EADDRINUSE :::3000`** — a server is already on port 3000. Kill it with
   `lsof -ti :3000 | xargs kill -9`.
 - **`jwt expired`** — the JWT in localStorage has passed its 7-day expiry. Log out and back in.

@@ -21,7 +21,7 @@ function readEnv(names, fallback) {
 function mysqlConfig() {
   return {
     host: readEnv(['MYSQL_HOST', 'DB_HOST'], '127.0.0.1'),
-    port: parseInt(readEnv(['MYSQL_PORT', 'DB_PORT'], '8889'), 10),
+    port: parseInt(readEnv(['MYSQL_PORT', 'DB_PORT'], '3306'), 10),
     user: readEnv(['MYSQL_USER', 'DB_USER'], 'root'),
     password: readEnv(['MYSQL_PASSWORD', 'DB_PASSWORD'], 'root'),
     database: readEnv(['MYSQL_DATABASE', 'DB_NAME'], 'marketplace'),

@@ -6,7 +6,7 @@
 |-------|-----------|
 | Frontend | React 16, React Router 5, inline styles |
 | Backend | Node.js 26, Express 4, Babel (ESM → CJS via webpack) |
-| Database | MySQL (MAMP locally, configurable via `.env`) |
+| Database | MySQL 8 (remote, configured via `.env`) |
 | Build | Webpack 4 (separate client + server bundles) |
 | Dev server | Nodemon + webpack-dev-middleware + HMR |
 
@@ -36,8 +36,7 @@ sellingwebsite/
 ├── database/             ← DATABASE / DBA
 │   ├── connection.js     ← mysql2 pool — import this in repositories
 │   ├── migrations/       ← Schema changes; run in order on every new environment
-│   ├── seeds/            ← Sample data for development; idempotent
-│   └── legacy/           ← Old SQL files kept for reference — do not run
+│   └── seeds/            ← Sample data for development; idempotent
 │
 ├── tests/                ← ANY DEVELOPER
 │   └── api/              ← Integration tests (require running server + MySQL)

@@ -9,7 +9,7 @@
 -- UNIQUE (listing_id, buyer_id) key still guarantees one admin thread per
 -- listing, and the participant checks in conversations.controller keep working.
 
-USE marketplace;
+-- Runs against the database selected by the connection (via .env).
 
 ALTER TABLE conversations
   ADD COLUMN type ENUM('buyer_seller','admin_support')

@@ -4,9 +4,9 @@
 
 | Tool | Version |
 |------|---------|
-| Node.js | 13+ (tested on v26) |
+| Node.js | 20+ |
 | npm | 6+ |
-| MySQL | 5.7 or 8.0 via MAMP, XAMPP, or system install |
+| MySQL | 8.0+ (remote, configured via `.env`) |
 
 ---
 
@@ -26,51 +26,39 @@ npm install
 cp .env.example .env
 ```
 
-Open `.env` and fill in your local values:
+Open `.env` and fill in your database connection details:
 
 ```
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=8889       # MAMP default; standard MySQL uses 3306
-MYSQL_USER=root
-MYSQL_PASSWORD=root   # MAMP default
-MYSQL_DATABASE=marketplace
+MYSQL_HOST=<your-db-host>
+MYSQL_PORT=<your-db-port>
+MYSQL_USER=<your-db-user>
+MYSQL_PASSWORD=<your-db-password>
+MYSQL_DATABASE=<your-db-name>
+MYSQL_SSL=true
 ```
 
 > **Important:** Never commit `.env`. It is listed in `.gitignore`.
 
 ---
 
-## 3. Set up the MySQL database
+## 3. Set up the database
 
-### Start MySQL
-
-- **MAMP:** Open MAMP → click **Start Servers** → wait for MySQL to go green
-- **System MySQL:** `mysql.server start`
-
-### Run the migration (creates tables)
-
-**Option A — phpMyAdmin (easiest)**
-
-1. Open `http://localhost:8888/phpMyAdmin`
-2. Click **Import** → **Choose File**
-3. Select `database/migrations/001_create_tables.sql`
-4. Click **Go**
-
-**Option B — Terminal**
+### Verify connection
 
 ```bash
-# MAMP
-/Applications/MAMP/Library/bin/mysql -u root -p -P 8889 < database/migrations/001_create_tables.sql
-
-# System MySQL
-mysql -u root -p < database/migrations/001_create_tables.sql
+npm run db:inspect
 ```
 
-### Run the seed (sample data)
+This connects (read-only) and reports which tables exist, column checks, and row counts.
 
-Repeat the same import step with `database/seeds/001_seed_data.sql`.
+### Run initial setup (empty database only)
 
-Both files are **idempotent** — safe to re-run if something goes wrong.
+```bash
+npm run db:setup          # schema + migrations only
+npm run db:setup:full     # schema + migrations + demo data + admin account
+```
+
+The setup script refuses to run if tables already exist (use `--force` to override).
 
 ---
 
@@ -100,7 +88,9 @@ See `docs/architecture.md` for the full folder map and a guide on which folder e
 | `npm run development` | Start dev server with hot reload |
 | `npm run build` | Build for production (outputs to `dist/`) |
 | `npm run start` | Run the production build |
-| `npm test` | Run integration tests (requires running server + MySQL) |
+| `npm run db:inspect` | Check database connection and schema status |
+| `npm run db:setup` | Initial database setup (schema + migrations) |
+| `npm run db:setup:full` | Initial setup with demo seed data + admin |
 
 ---
 
@@ -110,7 +100,7 @@ See `docs/architecture.md` for the full folder map and a guide on which folder e
 |--------|-----|-------------|
 | GET | `/api/health` | Server health check |
 | GET | `/api/categories` | Returns all categories |
-| GET | `/api/listings` | Returns all listings with category |
+| GET | `/api/listings` | Returns all active listings with category |
 
 ---
 
@@ -118,12 +108,12 @@ See `docs/architecture.md` for the full folder map and a guide on which folder e
 
 | Error | Fix |
 |-------|-----|
-| `ECONNREFUSED` on port 8889/3306 | MySQL is not running — start MAMP or MySQL |
+| `ECONNREFUSED` | Database not reachable — check `MYSQL_HOST` and `MYSQL_PORT` in `.env` |
 | `ER_ACCESS_DENIED_ERROR` | Wrong `MYSQL_USER` / `MYSQL_PASSWORD` in `.env` |
-| `ER_BAD_DB_ERROR` | Database not created — run the migration SQL |
+| `ER_BAD_DB_ERROR` | Database does not exist — create it on your hosting provider |
 | Listings not loading | Open browser console and check for failed `/api/listings` fetch |
 | Port 3000 in use | `lsof -ti :3000 \| xargs kill -9` then retry |
-| `ERR_OSSL_EVP_UNSUPPORTED` | Node.js version too new — already handled via `NODE_OPTIONS` in `nodemon.json` |
+| `ERR_OSSL_EVP_UNSUPPORTED` | Already handled via `NODE_OPTIONS` in `nodemon.json` |
 
 ---
 
@@ -131,6 +121,7 @@ See `docs/architecture.md` for the full folder map and a guide on which folder e
 
 | File | Purpose |
 |------|---------|
-| `database/migrations/001_create_tables.sql` | Creates `categories` and `listings` tables |
-| `database/seeds/001_seed_data.sql` | Inserts sample data |
-| `database/legacy/` | Old SQL files kept for reference — do not use for fresh setup |
+| `database/migrations/002_full_schema.sql` | Creates all 10 tables (full schema) |
+| `database/migrations/003_conversation_type.sql` | Adds conversation type column |
+| `database/seeds/002_seed_data.sql` | Demo data for development |
+| `database/seeds/003_admin01.sql` | Admin account setup |

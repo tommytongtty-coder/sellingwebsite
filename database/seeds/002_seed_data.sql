@@ -4,7 +4,7 @@
 -- Passwords are bcrypt hashes of "password123"
 -- ============================================================
 
-USE marketplace;
+-- Runs against the database selected by the connection (via .env).
 
 -- ── Users ────────────────────────────────────────────────────
 -- password_hash = bcrypt('password123', 10 rounds)
