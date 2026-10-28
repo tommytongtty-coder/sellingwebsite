@@ -58,7 +58,7 @@ const zhHK = {
   'Show protected listings with payment support and a refund path when eligible.':
     '顯示受保障商品，支援付款協助及符合條件時退款。',
   'All Product': '所有商品',
-  'Messages': '買家',
+  'Messages': '賣家',
   'All listed products in the marketplace.': '市場內所有已刊登商品。',
   'products': '件商品',
   'Product': '商品',
@@ -115,6 +115,84 @@ const zhHK = {
   'Draft': '草稿',
   'Sold': '已售出',
   'Rejected': '已拒絕',
+  'All': '全部',
+  'GPU Brand': 'GPU 品牌',
+  'Price (HK$)': '價格 (HK$)',
+  'Min': '最低',
+  'Max': '最高',
+  'Apply Filters': '套用篩選',
+  'Hide Filters': '隱藏篩選',
+  'Show Filters': '顯示篩選',
+  'RTX 50 Series': 'RTX 50 系列',
+  'RTX 40 Series': 'RTX 40 系列',
+  'RTX 30 Series': 'RTX 30 系列',
+  'RX 9000 Series': 'RX 9000 系列',
+  'RX 7000 Series': 'RX 7000 系列',
+  'Arc Series': 'Arc 系列',
+  'All Models': '所有型號',
+  'All Areas': '所有地區',
+  'Mong Kok': '旺角',
+  'Kwun Tong': '觀塘',
+  'Tsuen Wan': '荃灣',
+  'Central': '中環',
+  'Sham Shui Po': '深水埗',
+  'Transaction Info': '交易資訊',
+  'Delivery Method': '交收方式',
+  'Meet-up / Pickup — Free': '面交 / 自取 — 免費',
+  'Shipping — Buyer pays freight': '送貨 — 運費由買家承擔',
+  'Payment Method': '付款方式',
+  'PayMe — No surcharge': 'PayMe — 無額外付款手續費',
+  'Credit Card — Extra 5%': '信用卡 — 額外 5%',
+  'Installation Service': '安裝服務',
+  'GPU installation service (+HK$200)': '需要 GPU 安裝服務（+HK$200）',
+  'Estimated Cost': '預計費用',
+  'Item Price': '商品價格',
+  'Platform Fee (2%)': '平台費 (2%)',
+  'Payment Processing Fee': '付款手續費',
+  'Shipping Fee': '運費',
+  'Free': '免費',
+  'Estimated Total': '預計總額',
+  'Your Offer': '你的出價',
+  'Enter your offer amount': '輸入你的出價金額',
+  'Disclaimer: This is an interactive demo. Buyers pay a platform fee; platform and credit card fees are calculated based on item price. Actual pricing rules to be confirmed. Not connected to an order system.':
+    '互動式設計示範：暫時假設買家支付平台費，平台費及信用卡費均按商品價格計算；真正收費規則要先確認，未連接訂單系統。',
+  'Added to your favorites': '已添加到你的收藏',
+  'Removed from your favorites': '已從你的收藏移除',
+  'Selling': '出售中',
+  'Buying': '購買中',
+  'My Account': '我的帳戶',
+  'Member since': '加入於',
+  'Your Listings': '你的商品',
+  '+ New Listing': '+ 新商品',
+  "You don't have any listings yet": '你還沒有任何商品',
+  'Create your first listing': '建立你的第一個商品',
+  'Loading listings...': '正在載入商品...',
+  'Loading offers...': '正在載入出價...',
+  'Loading messages...': '正在載入訊息...',
+  "You haven't made any offers yet": '你還沒有出過價',
+  'No conversations yet': '尚無對話',
+  'No messages yet': '尚無訊息',
+  'Shop Admin': '店舖管理員',
+  'Your offer:': '你的出價：',
+  'Just now': '剛剛',
+  'Yesterday': '昨天',
+  'Favorites': '收藏',
+  'No favorites yet': '尚無收藏商品',
+  'Browse listings to add favorites': '瀏覽商品並加入收藏',
+  'Loading favorites...': '正在載入收藏...',
+  'Rating': '評分',
+  'Sold': '已售出',
+  'Support': '客服',
+  'Create your first listing': '建立你的第一個商品',
+  "You don't have any listings yet": '你還沒有任何商品',
+  "You haven't made any offers yet": '你還沒有出過價',
+  'Browse listings to add favorites': '瀏覽商品並加入收藏',
+  'No favorites yet': '尚無收藏商品',
+  'Make offer to seller': '向店長出價',
+  'Please enter a valid amount': '請輸入有效金額',
+  'Offer too low, minimum is': '出價太低，最低為',
+  'Offer too high, maximum is': '出價太高，最高為',
+  'Acceptable range:': '可接受範圍：',
 };
 
 const LanguageContext = createContext({
@@ -124,7 +202,19 @@ const LanguageContext = createContext({
 });
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguageState] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem('app_language') || 'zh-HK';
+    }
+    return 'zh-HK';
+  });
+
+  const setLanguage = (lang) => {
+    setLanguageState(lang);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('app_language', lang);
+    }
+  };
 
   const t = (text) => {
     if (language !== 'zh-HK') return text;

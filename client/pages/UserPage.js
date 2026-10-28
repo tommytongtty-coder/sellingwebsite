@@ -4,6 +4,7 @@ import { Link, Redirect } from 'react-router-dom';
 import { shell, card } from '../styles/globals';
 import SiteHeader from '../components/SiteHeader';
 import { useAuth } from '../auth';
+import { useLanguage } from '../i18n';
 import { getMyListings, getMyFavorites, getMyOffers, getConversations } from '../services/api';
 
 const STATUS_STYLE = {
@@ -25,30 +26,39 @@ function formatCondition(c) {
   return c.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, t) {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('Just now');
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}h`;
   const days = Math.floor(hrs / 24);
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
+  if (days === 1) return t('Yesterday');
+  return `${days}d`;
 }
+
+const HeartIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
 
 const UserPage = () => {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('Selling');
-  const tabs = ['Selling', 'Buying', 'Messages'];
+  const tabs = ['Selling', 'Buying', 'Messages', 'Favorites'];
 
   const [sellingItems, setSellingItems] = useState([]);
   const [buyingItems, setBuyingItems] = useState([]);
   const [conversations, setConversations] = useState([]);
+  const [favoriteItems, setFavoriteItems] = useState([]);
   const [loadingSelling, setLoadingSelling] = useState(true);
   const [loadingBuying, setLoadingBuying] = useState(true);
   const [loadingChats, setLoadingChats] = useState(true);
+  const [loadingFavs, setLoadingFavs] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -66,6 +76,11 @@ const UserPage = () => {
       .then((rows) => setConversations(rows))
       .catch((err) => console.error('Failed to load conversations:', err))
       .finally(() => setLoadingChats(false));
+
+    getMyFavorites()
+      .then((rows) => setFavoriteItems(Array.isArray(rows) ? rows : []))
+      .catch(() => setFavoriteItems([]))
+      .finally(() => setLoadingFavs(false));
   }, [user]);
 
   if (!authLoading && !user) {
@@ -134,14 +149,14 @@ const UserPage = () => {
                 {user ? (user.display_name || user.username) : 'My Account'}
               </div>
               <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>
-                @{user ? user.username : '...'} · Member since {user && user.created_at ? new Date(user.created_at).getFullYear() : '...'}
+                @{user ? user.username : '...'} · {t('Member since')} {user && user.created_at ? new Date(user.created_at).getFullYear() : '...'}
               </div>
             </div>
             <div style={{ display: 'flex', gap: '32px' }}>
               {[
-                { label: 'Listings', value: String(sellingItems.length) },
-                { label: 'Sold', value: String(soldCount) },
-                { label: 'Rating', value: `\u2605 ${userRating}` },
+                { label: t('Listings'), value: String(sellingItems.length) },
+                { label: t('Sold'), value: String(soldCount) },
+                { label: t('Rating'), value: `\u2605 ${userRating}` },
               ].map((s) => (
                 <div key={s.label} style={{ textAlign: 'center' }}>
                   <div style={{ color: '#fff', fontSize: '22px', fontWeight: 700 }}>{s.value}</div>
@@ -166,19 +181,22 @@ const UserPage = () => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
+                alignItems: 'center',
                 background: 'none',
                 border: 'none',
                 borderBottom: activeTab === tab ? '3px solid #8b5cf6' : '3px solid transparent',
                 color: activeTab === tab ? '#8b5cf6' : '#64748b',
                 cursor: 'pointer',
+                display: 'inline-flex',
                 fontSize: '15px',
                 fontWeight: activeTab === tab ? 700 : 500,
+                gap: '6px',
                 marginBottom: '-2px',
                 padding: '12px 20px',
                 transition: 'all 0.15s',
               }}
             >
-              {tab}
+              {tab === 'Favorites' ? <HeartIcon size={16} /> : t(tab)}
             </button>
           ))}
         </div>
@@ -195,7 +213,7 @@ const UserPage = () => {
               }}
             >
               <div style={{ fontSize: '16px', fontWeight: 700 }}>
-                Your Listings ({sellingItems.length})
+                {t('Your Listings')} ({sellingItems.length})
               </div>
               <Link
                 to="/sell"
@@ -209,20 +227,20 @@ const UserPage = () => {
                   textDecoration: 'none',
                 }}
               >
-                + New Listing
+                {t('+ New Listing')}
               </Link>
             </div>
 
             {loadingSelling && (
               <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
-                Loading listings...
+                {t('Loading listings...')}
               </div>
             )}
 
             {!loadingSelling && sellingItems.length === 0 && (
               <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
                 <div style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '14px' }}>
-                  You don&apos;t have any listings yet
+                  {t("You don't have any listings yet")}
                 </div>
                 <Link
                   to="/sell"
@@ -236,7 +254,7 @@ const UserPage = () => {
                     textDecoration: 'none',
                   }}
                 >
-                  Create your first listing
+                  {t('Create your first listing')}
                 </Link>
               </div>
             )}
@@ -286,7 +304,7 @@ const UserPage = () => {
                       {item.title}
                     </div>
                     <div style={{ color: '#64748b', fontSize: '13px' }}>
-                      {formatCondition(item.condition)} · {timeAgo(item.created_at)}
+                      {formatCondition(item.condition)} · {timeAgo(item.created_at, t)}
                     </div>
                   </div>
                   <div style={{ color: '#111827', fontSize: '16px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
@@ -317,14 +335,14 @@ const UserPage = () => {
           <div style={{ display: 'grid', gap: '14px' }}>
             {loadingBuying && (
               <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
-                Loading offers...
+                {t('Loading offers...')}
               </div>
             )}
 
             {!loadingBuying && buyingItems.length === 0 && (
               <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
                 <div style={{ color: '#94a3b8', fontSize: '15px' }}>
-                  You haven&apos;t made any offers yet
+                  {t("You haven't made any offers yet")}
                 </div>
               </div>
             )}
@@ -369,7 +387,7 @@ const UserPage = () => {
                     {item.title}
                   </div>
                   <div style={{ color: '#64748b', fontSize: '13px' }}>
-                    Your offer: HK${Number(item.amount).toLocaleString()} · {timeAgo(item.created_at)}
+                    {t('Your offer:')} HK${Number(item.amount).toLocaleString()} · {timeAgo(item.created_at, t)}
                   </div>
                 </div>
                 <div style={{ color: '#111827', fontSize: '16px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
@@ -400,14 +418,14 @@ const UserPage = () => {
           <div style={{ display: 'grid', gap: '14px' }}>
             {loadingChats && (
               <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
-                Loading messages...
+                {t('Loading messages...')}
               </div>
             )}
 
             {!loadingChats && conversations.length === 0 && (
               <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
                 <div style={{ color: '#94a3b8', fontSize: '15px' }}>
-                  No conversations yet
+                  {t('No conversations yet')}
                 </div>
               </div>
             )}
@@ -453,7 +471,7 @@ const UserPage = () => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ alignItems: 'center', display: 'flex', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '15px', fontWeight: 700 }}>
-                      {conv.type === 'admin_support' ? 'Shop Admin' : conv.other_user_name}
+                      {conv.type === 'admin_support' ? t('Shop Admin') : conv.other_user_name}
                     </span>
                     {conv.type === 'admin_support' && (
                       <span
@@ -482,12 +500,12 @@ const UserPage = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {conv.last_message_body || 'No messages yet'}
+                    {conv.last_message_body || t('No messages yet')}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ color: '#64748b', fontSize: '12px' }}>
-                    {timeAgo(conv.last_message_time || conv.updated_at)}
+                    {timeAgo(conv.last_message_time || conv.updated_at, t)}
                   </div>
                   {Number(conv.unread_count) > 0 && (
                     <span
@@ -506,6 +524,86 @@ const UserPage = () => {
                     </span>
                   )}
                 </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Favorites tab */}
+        {activeTab === 'Favorites' && (
+          <div style={{ display: 'grid', gap: '14px' }}>
+            {loadingFavs && (
+              <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
+                {t('Loading favorites...')}
+              </div>
+            )}
+
+            {!loadingFavs && favoriteItems.length === 0 && (
+              <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
+                <div style={{ color: '#ef4444', marginBottom: '10px' }}>
+                  <HeartIcon size={32} />
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '15px', marginBottom: '6px' }}>
+                  {t('No favorites yet')}
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '13px' }}>
+                  {t('Browse listings to add favorites')}
+                </div>
+              </div>
+            )}
+
+            {favoriteItems.map((item) => (
+              <Link
+                key={item.id}
+                to={`/listing/${item.listing_id || item.id}`}
+                style={{
+                  ...card,
+                  alignItems: 'center',
+                  color: 'inherit',
+                  display: 'flex',
+                  gap: '18px',
+                  padding: '20px 24px',
+                  textDecoration: 'none',
+                }}
+              >
+                {item.cover_image ? (
+                  <img
+                    src={item.cover_image}
+                    alt=""
+                    style={{
+                      borderRadius: '14px',
+                      flexShrink: 0,
+                      height: '60px',
+                      objectFit: 'cover',
+                      width: '60px',
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, #ef444433, #ef444411)',
+                      border: '1.5px solid #ef444444',
+                      borderRadius: '14px',
+                      flexShrink: 0,
+                      height: '60px',
+                      width: '60px',
+                    }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>
+                    {item.title}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '13px' }}>
+                    {item.seller_name || ''} {item.condition ? `· ${formatCondition(item.condition)}` : ''}
+                  </div>
+                </div>
+                <div style={{ color: '#111827', fontSize: '16px', fontWeight: 700, minWidth: '90px', textAlign: 'right' }}>
+                  {formatPrice(item.price)}
+                </div>
+                <span style={{ color: '#ef4444', flexShrink: 0 }}>
+                  <HeartIcon size={20} />
+                </span>
               </Link>
             ))}
           </div>
