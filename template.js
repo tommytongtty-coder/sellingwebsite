@@ -19,12 +19,24 @@ export default ({markup, css}) => {
               }
               @media (max-width: 900px){
                 .top-nav{
-                  grid-template-columns: 1fr !important;
+                  align-items: stretch !important;
                   padding-bottom: 18px;
                   padding-top: 18px;
                 }
+                .top-nav-brand{
+                  order: 1;
+                }
                 .nav-actions{
                   justify-content: flex-start !important;
+                  margin-left: 0 !important;
+                  order: 2;
+                  width: 100%;
+                }
+                .top-nav-search{
+                  flex: 1 1 100% !important;
+                  min-width: 0 !important;
+                  order: 3;
+                  width: 100%;
                 }
                 .hero-row{
                   grid-template-columns: 1fr !important;
