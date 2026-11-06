@@ -74,6 +74,30 @@ export async function sendMessage(req, res, next) {
   }
 }
 
+export async function openAdminChat(req, res, next) {
+  try {
+    const conversation = await conversationsService.openAdminChat(
+      req.params.listingId,
+      req.auth.id
+    );
+    res.json(conversation);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function openBuyerAdminChat(req, res, next) {
+  try {
+    const conversation = await conversationsService.openBuyerAdminChat(
+      req.params.listingId,
+      req.auth.id
+    );
+    res.json(conversation);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function markAsRead(req, res, next) {
   try {
     const conversation = await conversationsService.getConversationById(req.params.id);

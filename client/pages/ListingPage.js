@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useHistory } from 'react-router-dom';
 
 import { shell, card } from '../styles/globals';
 import SiteHeader from '../components/SiteHeader';
@@ -52,6 +52,7 @@ function fmtHKD(n) {
 const ListingPage = () => {
   const { id } = useParams();
   const { t } = useLanguage();
+  const history = useHistory();
   const [listing, setListing] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -478,6 +479,7 @@ const ListingPage = () => {
                 {/* Submit button */}
                 <button
                   type="button"
+                  onClick={() => history.push(`/negotiate/${id}`)}
                   style={{
                     background: '#111827',
                     border: 0,

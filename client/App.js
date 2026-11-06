@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ListingPage from './pages/ListingPage';
 import ChatPage from './pages/ChatPage';
+import NegotiatePage from './pages/NegotiatePage';
 import { LanguageProvider } from './i18n';
 import { AuthProvider } from './auth';
 import { ADMIN_PATH } from './routes';
@@ -22,6 +23,7 @@ const App = () => (
     <Route path="/sell" component={SellPage} />
     <Route path="/user" component={UserPage} />
     <Route path="/listing/:id" component={ListingPage} />
+    <Route path="/negotiate/:id" component={NegotiatePage} />
     <Route path="/chat/:id" component={ChatPage} />
     <Route path="/login" component={LoginPage} />
     <Route path="/register" component={RegisterPage} />

@@ -6,6 +6,8 @@ const router = Router();
 
 router.get('/', requireAuth, conversationsController.getConversations);
 router.post('/', requireAuth, conversationsController.createConversation);
+router.post('/listing/:listingId/admin', requireAuth, conversationsController.openAdminChat);
+router.post('/listing/:listingId/buyer-admin', requireAuth, conversationsController.openBuyerAdminChat);
 router.get('/:id', requireAuth, conversationsController.getConversation);
 router.get('/:id/messages', requireAuth, conversationsController.getMessages);
 router.post('/:id/messages', requireAuth, conversationsController.sendMessage);

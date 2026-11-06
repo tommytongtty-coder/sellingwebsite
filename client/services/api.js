@@ -183,6 +183,25 @@ export async function updateOfferStatus(id, status) {
   });
 }
 
+export async function getLatestOffer(listingId) {
+  return apiFetch(`/api/offers/listing/${listingId}/latest`);
+}
+
+export async function acceptOffer(id) {
+  return apiFetch(`/api/offers/${id}/accept`, { method: 'PATCH' });
+}
+
+export async function rejectOffer(id) {
+  return apiFetch(`/api/offers/${id}/reject`, { method: 'PATCH' });
+}
+
+export async function counterOffer(id, amount, message) {
+  return apiFetch(`/api/offers/${id}/counter`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, message }),
+  });
+}
+
 // ── Conversations + Messages ──────────────────────────────────
 export async function getConversations() {
   return apiFetch('/api/conversations');
@@ -196,6 +215,18 @@ export async function createConversation(listingId) {
   return apiFetch('/api/conversations', {
     method: 'POST',
     body: JSON.stringify({ listing_id: listingId }),
+  });
+}
+
+export async function openAdminChat(listingId) {
+  return apiFetch(`/api/conversations/listing/${listingId}/admin`, {
+    method: 'POST',
+  });
+}
+
+export async function openBuyerAdminChat(listingId) {
+  return apiFetch(`/api/conversations/listing/${listingId}/buyer-admin`, {
+    method: 'POST',
   });
 }
 
@@ -325,4 +356,23 @@ export async function adminSendMessage(conversationId, body) {
 
 export async function adminMarkAsRead(conversationId) {
   return adminFetch(`/api/conversations/${conversationId}/read`, { method: 'PATCH' });
+}
+
+export async function adminGetLatestOffer(listingId) {
+  return adminFetch(`/api/offers/listing/${listingId}/latest`);
+}
+
+export async function adminAcceptOffer(id) {
+  return adminFetch(`/api/offers/${id}/accept`, { method: 'PATCH' });
+}
+
+export async function adminRejectOffer(id) {
+  return adminFetch(`/api/offers/${id}/reject`, { method: 'PATCH' });
+}
+
+export async function adminCounterOffer(id, amount, message) {
+  return adminFetch(`/api/offers/${id}/counter`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, message }),
+  });
 }

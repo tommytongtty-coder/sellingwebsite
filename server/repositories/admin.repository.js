@@ -150,6 +150,12 @@ export async function getConversations() {
             l.title AS listing_title,
             l.price AS listing_price,
             l.status AS listing_status,
+            l.gpu_model AS listing_gpu_model,
+            l.brand AS listing_brand,
+            l.vram_gb AS listing_vram_gb,
+            l.condition AS listing_condition,
+            l.location AS listing_location,
+            l.description AS listing_description,
             (SELECT li.image_url FROM listing_images li
                WHERE li.listing_id = l.id AND li.is_cover = TRUE
                LIMIT 1) AS listing_cover,

@@ -40,12 +40,28 @@ export async function findById(id) {
   return rows[0];
 }
 
-export async function create({ listing_id, buyer_id, amount, message }) {
+export async function findLatestByListingId(listingId) {
+  const pool = await getDb();
+  const [rows] = await pool.query(
+    `SELECT o.*, u.display_name AS buyer_name,
+            l.title AS listing_title, l.price AS listing_price, l.seller_id
+       FROM offers o
+       JOIN users u ON u.id = o.buyer_id
+       JOIN listings l ON l.id = o.listing_id
+      WHERE o.listing_id = ? AND o.status IN ('pending','accepted','rejected')
+      ORDER BY o.created_at DESC
+      LIMIT 1`,
+    [listingId]
+  );
+  return rows[0] || null;
+}
+
+export async function create({ listing_id, buyer_id, offered_by, amount, message }) {
   const pool = await getDb();
   const [result] = await pool.query(
-    `INSERT INTO offers (listing_id, buyer_id, amount, message)
-     VALUES (?, ?, ?, ?)`,
-    [listing_id, buyer_id, amount, message || null]
+    `INSERT INTO offers (listing_id, buyer_id, offered_by, amount, message)
+     VALUES (?, ?, ?, ?, ?)`,
+    [listing_id, buyer_id, offered_by || buyer_id, amount, message || null]
   );
   return findById(result.insertId);
 }

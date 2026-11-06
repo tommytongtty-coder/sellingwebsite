@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Redirect } from 'react-router-dom';
+import { Link, Redirect, useHistory } from 'react-router-dom';
 
 import { shell, card } from '../styles/globals';
 import SiteHeader from '../components/SiteHeader';
 import { useAuth } from '../auth';
 import { useLanguage } from '../i18n';
-import { getMyListings, getMyFavorites, getMyOffers, getConversations } from '../services/api';
+import { getMyListings, getMyFavorites, getMyOffers, openAdminChat } from '../services/api';
 
 const STATUS_STYLE = {
   active:   { color: '#10b981', bg: '#d1fae5', label: 'Active' },
@@ -48,16 +48,15 @@ const HeartIcon = ({ size = 16 }) => (
 const UserPage = () => {
   const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const history = useHistory();
   const [activeTab, setActiveTab] = useState('Selling');
-  const tabs = ['Selling', 'Buying', 'Messages', 'Favorites'];
+  const tabs = ['Selling', 'Buying', 'Favorites'];
 
   const [sellingItems, setSellingItems] = useState([]);
   const [buyingItems, setBuyingItems] = useState([]);
-  const [conversations, setConversations] = useState([]);
   const [favoriteItems, setFavoriteItems] = useState([]);
   const [loadingSelling, setLoadingSelling] = useState(true);
   const [loadingBuying, setLoadingBuying] = useState(true);
-  const [loadingChats, setLoadingChats] = useState(true);
   const [loadingFavs, setLoadingFavs] = useState(true);
 
   useEffect(() => {
@@ -72,16 +71,18 @@ const UserPage = () => {
       .catch((err) => console.error('Failed to load offers:', err))
       .finally(() => setLoadingBuying(false));
 
-    getConversations()
-      .then((rows) => setConversations(rows))
-      .catch((err) => console.error('Failed to load conversations:', err))
-      .finally(() => setLoadingChats(false));
-
     getMyFavorites()
       .then((rows) => setFavoriteItems(Array.isArray(rows) ? rows : []))
       .catch(() => setFavoriteItems([]))
       .finally(() => setLoadingFavs(false));
   }, [user]);
+
+  // Open or get the admin chat for a listing, then navigate to it
+  const goToAdminChat = (listingId) => {
+    openAdminChat(listingId)
+      .then((conv) => history.push(`/chat/${conv.id}`))
+      .catch((err) => console.error('Failed to open admin chat:', err));
+  };
 
   if (!authLoading && !user) {
     return <Redirect to="/login" />;
@@ -262,17 +263,16 @@ const UserPage = () => {
             {sellingItems.map((item) => {
               const st = STATUS_STYLE[item.status] || STATUS_STYLE.draft;
               return (
-                <Link
+                <div
                   key={item.id}
-                  to={`/listing/${item.id}`}
+                  onClick={() => goToAdminChat(item.id)}
                   style={{
                     ...card,
                     alignItems: 'center',
-                    color: 'inherit',
+                    cursor: 'pointer',
                     display: 'flex',
                     gap: '18px',
                     padding: '20px 24px',
-                    textDecoration: 'none',
                   }}
                 >
                   {item.cover_image ? (
@@ -324,7 +324,7 @@ const UserPage = () => {
                   >
                     {st.label}
                   </span>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -350,9 +350,11 @@ const UserPage = () => {
             {buyingItems.map((item) => (
               <div
                 key={item.id}
+                onClick={() => history.push(`/negotiate/${item.listing_id || item.id}`)}
                 style={{
                   ...card,
                   alignItems: 'center',
+                  cursor: 'pointer',
                   display: 'flex',
                   gap: '18px',
                   padding: '20px 24px',
@@ -409,122 +411,6 @@ const UserPage = () => {
                   {item.offer_status}
                 </span>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Messages tab */}
-        {activeTab === 'Messages' && (
-          <div style={{ display: 'grid', gap: '14px' }}>
-            {loadingChats && (
-              <div style={{ color: '#64748b', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
-                {t('Loading messages...')}
-              </div>
-            )}
-
-            {!loadingChats && conversations.length === 0 && (
-              <div style={{ ...card, padding: '40px', textAlign: 'center' }}>
-                <div style={{ color: '#94a3b8', fontSize: '15px' }}>
-                  {t('No conversations yet')}
-                </div>
-              </div>
-            )}
-
-            {conversations.map((conv) => (
-              <Link
-                key={conv.id}
-                to={`/chat/${conv.id}`}
-                style={{
-                  ...card,
-                  alignItems: 'center',
-                  color: 'inherit',
-                  display: 'flex',
-                  gap: '18px',
-                  padding: '18px 22px',
-                  textDecoration: 'none',
-                }}
-              >
-                {conv.listing_cover ? (
-                  <img
-                    src={conv.listing_cover}
-                    alt=""
-                    style={{
-                      borderRadius: '14px',
-                      flexShrink: 0,
-                      height: '56px',
-                      objectFit: 'cover',
-                      width: '56px',
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, #8b5cf633, #8b5cf611)',
-                      border: '1.5px solid #8b5cf644',
-                      borderRadius: '14px',
-                      flexShrink: 0,
-                      height: '56px',
-                      width: '56px',
-                    }}
-                  />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ alignItems: 'center', display: 'flex', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 700 }}>
-                      {conv.type === 'admin_support' ? t('Shop Admin') : conv.other_user_name}
-                    </span>
-                    {conv.type === 'admin_support' && (
-                      <span
-                        style={{
-                          background: '#ede9fe',
-                          borderRadius: '999px',
-                          color: '#7c3aed',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          padding: '3px 8px',
-                        }}
-                      >
-                        Support
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ color: '#111827', fontSize: '13px', marginBottom: '3px' }}>
-                    {conv.listing_title}
-                  </div>
-                  <div
-                    style={{
-                      color: '#64748b',
-                      fontSize: '13px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {conv.last_message_body || t('No messages yet')}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>
-                    {timeAgo(conv.last_message_time || conv.updated_at, t)}
-                  </div>
-                  {Number(conv.unread_count) > 0 && (
-                    <span
-                      style={{
-                        background: '#ec4899',
-                        borderRadius: '999px',
-                        color: '#fff',
-                        display: 'inline-block',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        marginTop: '6px',
-                        padding: '3px 8px',
-                      }}
-                    >
-                      {conv.unread_count}
-                    </span>
-                  )}
-                </div>
-              </Link>
             ))}
           </div>
         )}

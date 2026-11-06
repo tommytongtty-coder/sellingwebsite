@@ -12,6 +12,7 @@ import {
   adminGetMessages,
   adminSendMessage,
   adminMarkAsRead,
+
 } from '../services/api';
 import AdminHeader from '../components/AdminHeader';
 import AdminLogin from '../components/AdminLogin';
@@ -86,6 +87,9 @@ const AdminPage = () => {
   const [conversations, setConversations] = useState([]);
   const [openThreadId, setOpenThreadId] = useState(null);
   const [threadMessages, setThreadMessages] = useState([]);
+  const [adminCounterInput, setAdminCounterInput] = useState('');
+  const [adminCounterError, setAdminCounterError] = useState('');
+  const [offerActionLoading, setOfferActionLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeAdminTab, setActiveAdminTab] = useState('All Product');
   const [search, setSearch] = useState('');
@@ -115,7 +119,7 @@ const AdminPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!admin || activeAdminTab !== 'Messages') return;
+    if (!admin || (activeAdminTab !== 'Seller Messages' && activeAdminTab !== 'Buyer Messages')) return;
     loadConversations();
   }, [admin, activeAdminTab, loadConversations]);
 
@@ -128,6 +132,8 @@ const AdminPage = () => {
   const openThreadById = useCallback((conversationId) => {
     setOpenThreadId(conversationId);
     setThreadMessages([]);
+    setAdminCounterInput('');
+    setAdminCounterError('');
     setActionError('');
     return loadThread(conversationId).then(() => {
       adminMarkAsRead(conversationId).then(loadConversations).catch(() => {});
@@ -152,14 +158,32 @@ const AdminPage = () => {
     adminOpenListingChat(selectedProduct.id)
       .then((conv) => {
         setSelectedProduct(null);
-        setActiveAdminTab('Messages');
+        setActiveAdminTab('Seller Messages');
         loadConversations();
         return openThreadById(conv.id);
       })
       .catch((err) => setActionError(err.message || 'Could not open chat'));
   };
 
-  const adminTabs = ['All Product', 'Messages', 'Logs'];
+  const handleAdminCounter = (conv) => {
+    if (offerActionLoading) return;
+    setAdminCounterError('');
+    const n = Number(adminCounterInput);
+    if (isNaN(n) || n <= 0) { setAdminCounterError(t('Please enter a valid amount')); return; }
+    setOfferActionLoading(true);
+    const msg = `${t('Admin Counter Offer')}: ${formatPrice(n)}`;
+    adminSendMessage(conv.id, msg)
+      .then(() => loadThread(conv.id))
+      .then(() => { setAdminCounterInput(''); })
+      .catch((err) => setActionError(err.message || 'Action failed'))
+      .finally(() => setOfferActionLoading(false));
+  };
+
+  const adminTabs = ['All Product', 'Seller Messages', 'Buyer Messages', 'Logs'];
+
+  // Filter conversations by role: seller chats have admin as buyer_id, buyer chats have admin as seller_id
+  const sellerConversations = conversations.filter((c) => c.buyer_id === admin.id);
+  const buyerConversations = conversations.filter((c) => c.seller_id === admin.id);
 
   // Filter by title, seller, or listing id
   const query = search.trim().toLowerCase();
@@ -397,15 +421,18 @@ const AdminPage = () => {
         </div>
         )}
 
-        {activeAdminTab === 'Messages' && (
+        {(activeAdminTab === 'Seller Messages' || activeAdminTab === 'Buyer Messages') && (() => {
+          const isSeller = activeAdminTab === 'Seller Messages';
+          const filtered = isSeller ? sellerConversations : buyerConversations;
+          return (
           <div style={{ display: 'grid', gap: '14px', padding: '24px 26px' }}>
-            {conversations.length === 0 && (
+            {filtered.length === 0 && (
               <div style={{ color: '#94a3b8', fontSize: '14px', padding: '20px', textAlign: 'center' }}>
                 {t('No conversations yet')}
               </div>
             )}
 
-            {conversations.map((conv) => (
+            {filtered.map((conv) => (
               <div
                 key={conv.id}
                 style={{
@@ -457,7 +484,7 @@ const AdminPage = () => {
                       <StatusTag status={conv.listing_status} size="sm" />
                     </div>
                     <div style={{ color: '#64748b', fontSize: '13px', marginTop: '3px' }}>
-                      {conv.seller_name}
+                      {isSeller ? conv.seller_name : conv.buyer_name}
                       {conv.type === 'admin_support' ? ` \u00b7 ${t('Support')}` : ''}
                     </div>
                   </div>
@@ -497,6 +524,170 @@ const AdminPage = () => {
 
                 {openThreadId === conv.id && (
                   <div style={{ borderTop: '1px solid #eef2f7' }}>
+
+                    {/* ── Seller tab: item specs + edit button ── */}
+                    {isSeller && (
+                      <div style={{ borderBottom: '1px solid #eef2f7', padding: '16px 18px' }}>
+                        <div style={{ display: 'flex', gap: '14px' }}>
+                          {conv.listing_cover ? (
+                            <img
+                              src={conv.listing_cover}
+                              alt=""
+                              style={{ borderRadius: '12px', flexShrink: 0, height: '90px', objectFit: 'cover', width: '90px' }}
+                            />
+                          ) : (
+                            <div style={{ background: '#e2e8f0', borderRadius: '12px', flexShrink: 0, height: '90px', width: '90px' }} />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>
+                              {conv.listing_title}
+                            </div>
+                            <div style={{ color: '#7c3aed', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>
+                              {formatPrice(conv.listing_price)}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {[
+                                conv.listing_brand,
+                                conv.listing_gpu_model,
+                                conv.listing_vram_gb ? `${conv.listing_vram_gb}GB` : null,
+                                conv.listing_condition ? formatCondition(conv.listing_condition) : null,
+                                conv.listing_location,
+                              ].filter(Boolean).map((tag) => (
+                                <span
+                                  key={tag}
+                                  style={{
+                                    background: '#eef2f7',
+                                    borderRadius: '999px',
+                                    color: '#475569',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    padding: '3px 8px',
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {conv.listing_description && (
+                          <div
+                            style={{
+                              WebkitBoxOrient: 'vertical',
+                              WebkitLineClamp: 2,
+                              color: '#64748b',
+                              display: '-webkit-box',
+                              fontSize: '13px',
+                              lineHeight: 1.5,
+                              marginTop: '10px',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {conv.listing_description}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveAdminTab('All Product');
+                            const item = adminItems.find((i) => i.id === conv.listing_id);
+                            if (item) openProductDetail(item);
+                          }}
+                          style={{
+                            alignItems: 'center',
+                            background: '#ede9fe',
+                            border: '1px solid #ddd6fe',
+                            borderRadius: '10px',
+                            color: '#7c3aed',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            fontFamily: 'inherit',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            gap: '6px',
+                            justifyContent: 'center',
+                            marginTop: '12px',
+                            padding: '10px',
+                            width: '100%',
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          {t('Edit Product')}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── Buyer tab: counter-offer panel ── */}
+                    {!isSeller && (
+                      <div style={{ borderBottom: '1px solid #eef2f7', padding: '12px 18px' }}>
+                        <div style={{ color: '#111827', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                          {t('Admin Counter Offer')}
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <div
+                            style={{
+                              alignItems: 'center',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              flex: 1,
+                              gap: '4px',
+                              padding: '2px 10px',
+                            }}
+                          >
+                            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: 700 }}>HK$</span>
+                            <input
+                              type="number"
+                              placeholder={t('Amount')}
+                              value={adminCounterInput}
+                              onChange={(e) => { setAdminCounterInput(e.target.value); setAdminCounterError(''); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleAdminCounter(conv); }}
+                              style={{
+                                background: 'transparent',
+                                border: 0,
+                                color: '#111827',
+                                flex: 1,
+                                fontFamily: 'inherit',
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                outline: 'none',
+                                padding: '8px 0',
+                                width: '80px',
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={offerActionLoading || !adminCounterInput}
+                            onClick={() => handleAdminCounter(conv)}
+                            style={{
+                              background: '#7c3aed',
+                              border: 0,
+                              borderRadius: '8px',
+                              color: '#fff',
+                              cursor: offerActionLoading || !adminCounterInput ? 'default' : 'pointer',
+                              fontFamily: 'inherit',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              opacity: offerActionLoading ? 0.7 : 1,
+                              padding: '10px 16px',
+                            }}
+                          >
+                            {t('Admin Counter Offer')}
+                          </button>
+                        </div>
+                        {adminCounterError && (
+                          <div style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600, marginTop: '6px' }}>
+                            {adminCounterError}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <MessageThread
                       messages={threadMessages}
                       currentUserId={admin.id}
@@ -508,7 +699,8 @@ const AdminPage = () => {
               </div>
             ))}
           </div>
-        )}
+          );
+        })()}
 
         {activeAdminTab === 'Logs' && (
           <div style={{ overflowX: 'auto' }}>

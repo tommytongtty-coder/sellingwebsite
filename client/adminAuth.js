@@ -7,7 +7,7 @@ import { adminLogin, adminLogout, adminGetMe, getAdminToken } from './services/a
 // the other untouched.
 export function useAdminAuth() {
   const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(!!getAdminToken());
+  const [loading, setLoading] = useState(true);
 
   // Validate any stored admin token on mount
   useEffect(() => {
