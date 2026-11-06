@@ -29,6 +29,14 @@ export async function getConversations() {
   return adminRepository.getConversations();
 }
 
+export async function getQuickReplies(adminId, tabType) {
+  return adminRepository.getQuickReplies(adminId, tabType);
+}
+
+export async function setQuickReplies(adminId, tabType, replies) {
+  return adminRepository.setQuickReplies(adminId, tabType, replies);
+}
+
 // Opens the admin support thread for a listing, or returns the existing one.
 // seller_id is read from the listing rather than taken from the request, and
 // the thread is left empty so the admin writes the first message.

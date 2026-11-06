@@ -376,3 +376,14 @@ export async function adminCounterOffer(id, amount, message) {
     body: JSON.stringify({ amount, message }),
   });
 }
+
+export async function adminGetQuickReplies(tabType) {
+  return adminFetch(`/api/admin/quick-replies/${tabType}`);
+}
+
+export async function adminSetQuickReplies(tabType, replies) {
+  return adminFetch(`/api/admin/quick-replies/${tabType}`, {
+    method: 'PUT',
+    body: JSON.stringify({ replies }),
+  });
+}

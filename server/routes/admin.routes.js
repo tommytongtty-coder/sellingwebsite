@@ -14,5 +14,7 @@ router.post('/listings/:id/reject', adminController.rejectListing);
 router.post('/listings/:id/chat', adminController.openListingChat);
 router.get('/logs', adminController.getLogs);
 router.get('/conversations', adminController.getConversations);
+router.get('/quick-replies/:tabType', adminController.getQuickReplies);
+router.put('/quick-replies/:tabType', adminController.setQuickReplies);
 
 export default router;

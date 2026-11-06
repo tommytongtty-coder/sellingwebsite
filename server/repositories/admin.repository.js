@@ -177,3 +177,24 @@ export async function getConversations() {
   );
   return rows;
 }
+
+export async function getQuickReplies(adminId, tabType) {
+  const pool = await getDb();
+  const [rows] = await pool.query(
+    'SELECT replies FROM admin_quick_replies WHERE admin_id = ? AND tab_type = ?',
+    [adminId, tabType]
+  );
+  if (rows.length === 0) return null;
+  return typeof rows[0].replies === 'string' ? JSON.parse(rows[0].replies) : rows[0].replies;
+}
+
+export async function setQuickReplies(adminId, tabType, replies) {
+  const pool = await getDb();
+  await pool.query(
+    `INSERT INTO admin_quick_replies (admin_id, tab_type, replies)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE replies = VALUES(replies)`,
+    [adminId, tabType, JSON.stringify(replies)]
+  );
+  return replies;
+}

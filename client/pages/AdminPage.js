@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import { shell, card } from '../styles/globals';
 import {
@@ -18,6 +18,7 @@ import AdminHeader from '../components/AdminHeader';
 import AdminLogin from '../components/AdminLogin';
 import MessageThread from '../components/MessageThread';
 import StatusTag from '../components/StatusTag';
+import QuickReplyBar from '../components/QuickReplyBar';
 import { useAdminAuth } from '../adminAuth';
 import { useLanguage } from '../i18n';
 
@@ -95,7 +96,14 @@ const AdminPage = () => {
   const [search, setSearch] = useState('');
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
+  const draftSetterRef = useRef(null);
   const { t } = useLanguage();
+
+  const handleQuickReply = (text) => {
+    if (draftSetterRef.current) {
+      draftSetterRef.current((prev) => prev ? prev + ' ' + text : text);
+    }
+  };
 
   const loadListings = useCallback(() => {
     adminGetListings()
@@ -693,6 +701,13 @@ const AdminPage = () => {
                       currentUserId={admin.id}
                       onSend={(body) => adminSendMessage(conv.id, body).then(() => loadThread(conv.id))}
                       height="320px"
+                      draftRef={draftSetterRef}
+                      renderAboveInput={
+                        <QuickReplyBar
+                          tabType={isSeller ? 'seller' : 'buyer'}
+                          onSelect={handleQuickReply}
+                        />
+                      }
                     />
                   </div>
                 )}

@@ -74,3 +74,25 @@ export async function getConversations(req, res, next) {
     next(err);
   }
 }
+
+export async function getQuickReplies(req, res, next) {
+  try {
+    const replies = await adminService.getQuickReplies(req.auth.id, req.params.tabType);
+    res.json(replies || []);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function setQuickReplies(req, res, next) {
+  try {
+    const { replies } = req.body;
+    if (!Array.isArray(replies)) {
+      return res.status(400).json({ error: 'replies must be an array' });
+    }
+    const saved = await adminService.setQuickReplies(req.auth.id, req.params.tabType, replies);
+    res.json(saved);
+  } catch (err) {
+    next(err);
+  }
+}

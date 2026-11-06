@@ -14,12 +14,18 @@ function formatTime(dateStr) {
 
 // Message list plus composer. Shared by the seller's chat page and the admin
 // console, so both sides of a thread look and behave the same.
-const MessageThread = ({ messages, currentUserId, onSend, height = '420px' }) => {
+const MessageThread = ({ messages, currentUserId, onSend, height = '420px', draftRef, renderAboveInput }) => {
   const { t } = useLanguage();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const bottomRef = useRef(null);
+
+  // Expose setDraft to parent via ref so quick-reply pills can inject text
+  useEffect(() => {
+    if (draftRef) draftRef.current = setDraft;
+    return () => { if (draftRef) draftRef.current = null; };
+  }, [draftRef]);
 
   // Keep the newest message in view
   useEffect(() => {
@@ -86,6 +92,8 @@ const MessageThread = ({ messages, currentUserId, onSend, height = '420px' }) =>
         })}
         <div ref={bottomRef} />
       </div>
+
+      {renderAboveInput || null}
 
       <form
         onSubmit={handleSubmit}
